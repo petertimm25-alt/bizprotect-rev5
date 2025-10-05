@@ -1,0 +1,2 @@
+import React from 'react'
+export default function ThemeToggle(){const [theme,setTheme]=React.useState<string>(document.documentElement.dataset.theme||'navy');return(<button onClick={()=>{const n=theme==='ivory'?'navy':'ivory';document.documentElement.dataset.theme=n;setTheme(n)}} className='text-sm px-3 py-1 rounded border border-gold/40 hover:text-gold transition' title='สลับธีม Navy–Gold ↔ Ivory–Gold'>Theme: {theme==='ivory'?'Ivory–Gold':'Navy–Gold'}</button>)}

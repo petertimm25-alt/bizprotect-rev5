@@ -1,0 +1,1 @@
+const KEY='bp:data/v1'; export function load<T>(fb:T):T{try{const t=localStorage.getItem(KEY); if(!t) return fb; return JSON.parse(t) as T}catch{return fb}} export function save<T>(d:T){try{localStorage.setItem(KEY,JSON.stringify(d))}catch{}}
