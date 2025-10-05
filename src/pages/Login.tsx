@@ -19,7 +19,7 @@ export default function Login() {
     <main className="mx-auto max-w-md px-6 py-12">
       <h1 className="text-2xl font-semibold text-gold mb-4">เข้าสู่ระบบ</h1>
       <p className="text-sm text-[color:var(--ink-dim)] mb-6">
-        เข้าสู่ระบบเพื่อใช้งานแผน <span className="text-gold font-medium">FREE</span> (ไม่มี Demo)
+        เข้าสู่ระบบเพื่อใช้งานแผน <span className="text-gold font-medium">FREE</span>
       </p>
 
       <form onSubmit={onSubmit} className="space-y-4">

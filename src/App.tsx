@@ -6,6 +6,7 @@ import HeaderNav from './components/HeaderNav'
 import Pricing from './pages/Pricing'
 import Login from './pages/Login'
 import PrivateRoute from './routes/PrivateRoute'
+import { Navigate } from 'react-router-dom';
 
 // ใส่หน้า Dashboard/Knowledge จริงของโปรเจกต์คุณแทนด้านล่าง
 import Dashboard from './pages/Dashboard'
@@ -26,6 +27,8 @@ export default function App() {
           <Route path="/pricing" element={<Pricing />} />
           <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/demo" element={<Navigate to="/login" replace />} />
+          <Route path="/try" element={<Navigate to="/login" replace />} />
 
           {/* fallback */}
           <Route path="*" element={<Dashboard />} />
