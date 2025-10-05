@@ -1,46 +1,36 @@
-// src/App.tsx
+// src/App.tsx (ตัวอย่างโครง ถ้าไฟล์คุณมีหน้ามากกว่านี้ ให้ปรับตามจริง)
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import HeaderNav from './components/HeaderNav'
-import Knowledge from './pages/Knowledge'
-import Pricing from './pages/Pricing'
-// import TaxEngine from './pages/TaxEngine'           // ⛔ ซ่อนแล้ว
-// import ProposalBuilder from './pages/ProposalBuilder' // ⛔ ซ่อนแล้ว
-// import RecommendedPlans from './pages/RecommendedPlans' // ⛔ ซ่อนแล้ว
-
-// ใช้ UnifiedDashboard เป็น Dashboard (ถ้ารีเนมไฟล์เป็น Dashboard.tsx ให้เปลี่ยนบรรทัดนี้เป็น:
-// import Dashboard from './pages/Dashboard'
-import Dashboard from './pages/Dashboard'
-
 import { AuthProvider } from './lib/auth'
+import HeaderNav from './components/HeaderNav'
+import Pricing from './pages/Pricing'
+import Login from './pages/Login'
+import PrivateRoute from './routes/PrivateRoute'
+
+// ใส่หน้า Dashboard/Knowledge จริงของโปรเจกต์คุณแทนด้านล่าง
+import Dashboard from './pages/Dashboard'
+import Knowledge from './pages/Knowledge'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <div className="min-h-screen text-[color:var(--ink)]">
-          <HeaderNav />
-          <Routes>
-            {/* Dashboard เป็นหน้าแรก */}
+    <AuthProvider>
+      <BrowserRouter>
+        <HeaderNav />
+        <Routes>
+          {/* ต้องล็อกอินก่อน */}
+          <Route element={<PrivateRoute />}>
             <Route path="/" element={<Dashboard />} />
-            {/* เผื่อมีการลิงก์ตรงมาที่ /dashboard */}
-            <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
 
-            {/* หน้าอื่นที่ยังใช้ */}
-            <Route path="/knowledge" element={<Knowledge />} />
-            <Route path="/pricing" element={<Pricing />} />
+          {/* หน้าเปิดสาธารณะ */}
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/knowledge" element={<Knowledge />} />
+          <Route path="/login" element={<Login />} />
 
-            {/* ซ่อน route ที่รวมแล้ว */}
-            {/* <Route path="/proposal" element={<ProposalBuilder />} /> */}
-            {/* <Route path="/recommended-plans" element={<RecommendedPlans />} /> */}
-            {/* <Route path="/engine" element={<TaxEngine />} /> */}
-          </Routes>
-
-          <footer className="mx-auto max-w-6xl px-6 py-8 text-sm text-[color:var(--ink-dim)]">
-            © {new Date().getFullYear()} BizProtect
-          </footer>
-        </div>
-      </AuthProvider>
-    </BrowserRouter>
+          {/* fallback */}
+          <Route path="*" element={<Dashboard />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

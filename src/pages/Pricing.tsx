@@ -1,6 +1,6 @@
 // src/pages/Pricing.tsx
 import React from 'react'
-import { useAuth } from '../lib/auth'
+import { Link } from 'react-router-dom'
 
 const Bullet = ({ children }: { children: React.ReactNode }) => (
   <li className="flex items-start gap-2">
@@ -12,7 +12,6 @@ const Bullet = ({ children }: { children: React.ReactNode }) => (
 type PlanKey = 'free' | 'pro' | 'ultra'
 
 export default function Pricing() {
-  const { loginAsDemo, user } = useAuth()
   const [selected, setSelected] = React.useState<PlanKey>('pro')
 
   const baseCard = "rounded-2xl p-6 bg-white/5 transition-all outline-none cursor-pointer"
@@ -24,11 +23,7 @@ export default function Pricing() {
     <main className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="text-2xl font-semibold text-gold mb-6">เลือกแผน</h1>
 
-      <div
-        role="radiogroup"
-        aria-label="เลือกแผนการใช้งาน"
-        className="grid md:grid-cols-3 gap-6"
-      >
+      <div role="radiogroup" aria-label="เลือกแผนการใช้งาน" className="grid md:grid-cols-3 gap-6">
         {/* Free */}
         <div
           role="radio"
@@ -49,12 +44,12 @@ export default function Pricing() {
             <Bullet>คำนวณเปรียบเทียบก่อน/หลัง ทำกรมธรรม์ฯ</Bullet>
             <Bullet>คำนวณเงินบวกกลับค่าใช้จ่ายต้องห้าม</Bullet>
           </ul>
-          <button
-            onClick={() => loginAsDemo('free')}
-            className="mt-6 w-full rounded-lg ring-1 ring-white/20 px-4 py-2 hover:bg-white/10"
+          <Link
+            to="/login"
+            className="mt-6 w-full inline-block text-center rounded-lg ring-1 ring-white/20 px-4 py-2 hover:bg-white/10"
           >
-            เริ่มใช้งาน (Demo Free)
-          </button>
+            เริ่มใช้งาน (ต้องเข้าสู่ระบบ)
+          </Link>
         </div>
 
         {/* Pro */}
@@ -80,12 +75,12 @@ export default function Pricing() {
             <Bullet>Export PDF เพื่อเสนอลูกค้า</Bullet>
             <Bullet>ใส่ข้อมูลตัวแทนบนเอกสาร (ชื่อ/เบอร์/อีเมล)</Bullet>
           </ul>
-          <button
-            onClick={() => loginAsDemo('pro')}
-            className="mt-6 w-full rounded-lg ring-1 ring-gold/50 px-4 py-2 hover:bg-gold/10 text-gold"
+          <Link
+            to="/login"
+            className="mt-6 w-full inline-block text-center rounded-lg ring-1 ring-gold/50 px-4 py-2 hover:bg-gold/10 text-gold"
           >
-            ทดลอง Pro (Demo)
-          </button>
+            อัปเกรดเป็น PRO (หลังเข้าสู่ระบบ)
+          </Link>
         </div>
 
         {/* Ultra */}
@@ -108,21 +103,14 @@ export default function Pricing() {
             <Bullet>คลัง “ข้อหารือกรมสรรพากร”</Bullet>
             <Bullet>เพิ่มโลโก้หรือแบรนด์ของตัวเอง</Bullet>
           </ul>
-          <button
-            onClick={() => loginAsDemo('ultra')}
-            className="mt-6 w-full rounded-lg ring-1 ring-gold/50 px-4 py-2 hover:bg-gold/10 text-gold"
+          <Link
+            to="/login"
+            className="mt-6 w-full inline-block text-center rounded-lg ring-1 ring-gold/50 px-4 py-2 hover:bg-gold/10 text-gold"
           >
-            ทดลอง Ultra (Demo)
-          </button>
+            อัปเกรดเป็น ULTRA (หลังเข้าสู่ระบบ)
+          </Link>
         </div>
       </div>
-
-      {user && (
-        <p className="mt-6 text-sm text-[color:var(--ink-dim)]">
-          กำลังใช้งานในโหมด:{' '}
-          <span className="text-gold font-medium">{user.plan.toUpperCase()}</span>
-        </p>
-      )}
     </main>
   )
 }
