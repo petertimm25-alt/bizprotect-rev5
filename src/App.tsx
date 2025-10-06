@@ -1,39 +1,33 @@
-// src/App.tsx (ตัวอย่างโครง ถ้าไฟล์คุณมีหน้ามากกว่านี้ ให้ปรับตามจริง)
 import React from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from './lib/auth'
-import HeaderNav from './components/HeaderNav'
-import Pricing from './pages/Pricing'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useAuth } from './lib/auth'
 import Login from './pages/Login'
-import PrivateRoute from './routes/PrivateRoute'
-import { Navigate } from 'react-router-dom';
+import AuthCallback from './pages/AuthCallback'
+import Dashboard from './pages/Dashboard' // หน้าหลังบ้านจริงของคุณ
 
-// ใส่หน้า Dashboard/Knowledge จริงของโปรเจกต์คุณแทนด้านล่าง
-import Dashboard from './pages/Dashboard'
-import Knowledge from './pages/Knowledge'
+function RequireAuth({ children }: { children: JSX.Element }) {
+  const { user, loading } = useAuth()
+  const loc = useLocation()
+  if (loading) return <div className="p-8 text-center">กำลังตรวจสอบสิทธิ์…</div>
+  if (!user) return <Navigate to="/login" replace state={{ from: loc }} />
+  return children
+}
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <HeaderNav />
-        <Routes>
-          {/* ต้องล็อกอินก่อน */}
-          <Route element={<PrivateRoute />}>
-            <Route path="/" element={<Dashboard />} />
-          </Route>
-
-          {/* หน้าเปิดสาธารณะ */}
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/knowledge" element={<Knowledge />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/demo" element={<Navigate to="/login" replace />} />
-          <Route path="/try" element={<Navigate to="/login" replace />} />
-
-          {/* fallback */}
-          <Route path="*" element={<Dashboard />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route
+        path="/dashboard"
+        element={
+          <RequireAuth>
+            <Dashboard />
+          </RequireAuth>
+        }
+      />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
