@@ -1,4 +1,4 @@
-// src/pages/UnifiedDashboard.tsx
+// src/pages/Dashboard.tsx
 import React from 'react'
 import Card from '../components/Card'
 import NumberInput from '../components/NumberInput'
@@ -425,7 +425,8 @@ export default function UnifiedDashboard() {
             const netY3 = base - pit3 + g3
 
             return (
-              <details key={d.id} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4" open={idx === 0}>
+              <Card>
+              <details key={d.id} open={idx === 0}>
                 <summary className="flex items-center justify-between cursor-pointer select-none">
                   <div className="text-sm">
                     <span className="text-[color:var(--ink-dim)]">กรรมการ:</span>{' '}
@@ -545,7 +546,7 @@ export default function UnifiedDashboard() {
                   {/* แบบประกัน (static) */}
                   <div className="md:col-span-2">
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">แบบประกันฯ แนะนำ</div>
-                    <div className="rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10 text-gold">
+                    <div className="rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10 text-[#EBDCA6] text-bold">
                       {productName} / ชำระเบี้ย {payYears} ปี / คุ้มครองถึงอายุ 99 ปี
                     </div>
                   </div>
@@ -612,6 +613,7 @@ export default function UnifiedDashboard() {
                   พรีวิว ภ.ง.ด.91: เงินสุทธิ/ปี ก่อนฯ {fmt2(netY1)} • หลังฯมีเบี้ย {fmt2(netY2)} • หลังฯมีเบี้ย+ภาษีแทน {fmt2(netY3)}
                 </div>
               </details>
+              </Card>
             )
           })}
         </section>
@@ -753,11 +755,10 @@ export default function UnifiedDashboard() {
               const netY3 = base - pit3 + g3
 
               return (
-                <details key={it.id} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3" open={idx === 0}>
+                <details key={it.id} className="rounded-xl bg-gradient-to-b from-[#142440]/80 to-[#0B1529]/80 ring-1 ring-[#D4AF37]/20 p-3" open={idx === 0}>
                   <summary className="flex items-center justify-between cursor-pointer select-none">
                     <div className="text-sm">
-                      <span className="text-[color:var(--ink-dim)]">ผู้บริหาร:</span>{' '}
-                      <span className="text-[color:var(--ink)] font-medium">{it.name || `ผู้บริหาร ${idx + 1}`}</span>
+                      <span className="text-[#EBDCA6] font-medium">{it.name || `ผู้บริหาร ${idx + 1}`}</span>
                     </div>
                     <div className="text-xs text-[color:var(--ink-dim)]">คลิกเพื่อดู/ซ่อนรายละเอียด</div>
                   </summary>

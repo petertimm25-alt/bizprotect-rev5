@@ -1,14 +1,17 @@
-// src/components/HeaderNav.tsx
 import React from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const BASE = (import.meta as any)?.env?.BASE_URL || '/'
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  ['transition-colors', isActive ? 'text-gold' : 'text-[color:var(--ink)] hover:text-gold'].join(' ')
+  [
+    'transition-colors',
+    'text-sm',
+    isActive ? 'text-gold' : 'text-[color:var(--ink)] hover:text-gold'
+  ].join(' ')
 
 export default function HeaderNav() {
-  // รองรับได้ทั้งโค้ดใหม่ (signOut) และโค้ดเดิม (logout)
+  // รองรับทั้งโค้ดเดิม/ใหม่ (logout หรือ signOut)
   const auth = useAuth() as any
   const user = auth?.user ?? null
   const plan: 'free' | 'pro' | 'ultra' = (user?.plan ?? 'free') as any
