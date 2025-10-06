@@ -429,8 +429,7 @@ export default function UnifiedDashboard() {
               <details key={d.id} open={idx === 0}>
                 <summary className="flex items-center justify-between cursor-pointer select-none">
                   <div className="text-sm">
-                    <span className="text-[color:var(--ink-dim)]">กรรมการ:</span>{' '}
-                    <span className="text-[color:var(--ink)] font-medium">{d.name || `ผู้บริหาร ${idx + 1}`}</span>
+                    <span className="text-[#EBDCA6] font-medium">{d.name || `ผู้บริหาร ${idx + 1}`}</span>
                   </div>
                   <div className="text-xs text-[color:var(--ink-dim)]">คลิกเพื่อดู/ซ่อน</div>
                 </summary>
@@ -583,28 +582,36 @@ export default function UnifiedDashboard() {
                     <NumberInput value={surrY7} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderY7: v ?? undefined } : x) }
-                    }))} />
+                    }))} 
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                   <div>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">มูลค่ารับซื้อคืน เมื่ออายุ 60 ปี</div>
                     <NumberInput value={surrAge60} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderAge60: v ?? undefined } : x) }
-                    }))} />
+                    }))} 
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                   <div>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">มูลค่ารับซื้อคืน เมื่ออายุ 70 ปี</div>
                     <NumberInput value={surrAge70} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderAge70: v ?? undefined } : x) }
-                    }))} />
+                    }))}
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                   <div>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">มูลค่ารับซื้อคืน เมื่ออายุ 99 ปี</div>
                     <NumberInput value={surrAge99} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderAge99: v ?? undefined } : x) }
-                    }))} />
+                    }))}
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                 </div>
 

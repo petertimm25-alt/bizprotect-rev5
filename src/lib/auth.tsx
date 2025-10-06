@@ -1,6 +1,6 @@
 // src/lib/auth.tsx
 import React, { createContext, useContext } from 'react'
-import { createClient, type Session, type User } from '@supabase/supabase-js'
+import { createClient, type User } from '@supabase/supabase-js'
 
 type Plan = 'free' | 'pro' | 'ultra'
 export type UserLite = { id: string; email: string | null; name?: string | null; plan?: Plan }
@@ -12,14 +12,23 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null
 
+// ---- Dev plan override (Method A): localStorage "bp:plan"
+const readPlanOverride = (): Plan | null => {
+  try {
+    const v = (typeof window !== 'undefined' && localStorage.getItem('bp:plan')) || ''
+    return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
+  } catch { return null }
+}
+
 function mapUser(u: User | null): UserLite | null {
   if (!u) return null
+  const metaPlan = (u.user_metadata as any)?.plan as Plan | undefined
+  const plan: Plan = readPlanOverride() ?? metaPlan ?? 'free'
   return {
     id: u.id,
-    // ✅ แปลง undefined เป็น null เพื่อให้ตรง type
     email: u.email ?? null,
     name: (u.user_metadata as any)?.name ?? null,
-    plan: (u.user_metadata as any)?.plan ?? 'free',
+    plan,
   }
 }
 
@@ -30,7 +39,8 @@ type AuthContextShape = {
   envError?: string
   signInWithEmail: (email: string) => Promise<void>
   signOut: () => Promise<void>
-  logout: () => Promise<void> // alias ให้ HeaderNav เดิม
+  // alias เพื่อรองรับโค้ดเก่า
+  logout: () => Promise<void>
 }
 
 const AuthCtx = createContext<AuthContextShape | undefined>(undefined)
@@ -43,20 +53,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const envError = envReady ? undefined : 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local'
 
   React.useEffect(() => {
-    let sub: ReturnType<NonNullable<typeof supabase>['auth']['onAuthStateChange']> | undefined
+    // อย่าทำ Router ซ้อน/เด้งตอนยัง loading
+    if (!supabase) { setLoading(false); return }
 
-    async function boot() {
-      if (!supabase) { setLoading(false); return }
+    const boot = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(mapUser(session?.user ?? null))
       setLoading(false)
-
-      sub = supabase.auth.onAuthStateChange((_evt, sess) => {
-        setUser(mapUser(sess?.user ?? null))
-      })
     }
+
+    const sub = supabase.auth.onAuthStateChange((_evt, sess) => {
+      setUser(mapUser(sess?.user ?? null))
+    })
+
     boot()
-    return () => sub?.data.subscription.unsubscribe()
+    return () => sub.data.subscription.unsubscribe()
   }, [])
 
   const signInWithEmail = async (email: string) => {
@@ -71,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!supabase) return
+    if (!supabase) { setUser(null); return }
     await supabase.auth.signOut()
     setUser(null)
   }

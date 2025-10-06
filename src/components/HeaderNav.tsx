@@ -1,21 +1,40 @@
+// src/components/HeaderNav.tsx
 import React from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const BASE = (import.meta as any)?.env?.BASE_URL || '/'
-const linkClass = ({ isActive }: { isActive: boolean }) =>
-  [
-    'transition-colors',
-    'text-sm',
-    isActive ? 'text-gold' : 'text-[color:var(--ink)] hover:text-gold'
-  ].join(' ')
+
+// ให้ type ตรงกับ React Router v6 (isActive + isPending + isTransitioning)
+const linkClass = ({ isActive }: { isActive: boolean; isPending: boolean; isTransitioning: boolean }) =>
+  ['transition-colors', 'text-sm', isActive ? 'text-gold' : 'text-[color:var(--ink)] hover:text-gold'].join(' ')
+
+type Plan = 'free' | 'pro' | 'ultra'
+function getEffectivePlan(userPlan?: Plan | null): Plan {
+  const ov = (localStorage.getItem('bp:plan') || '').toLowerCase()
+  if (ov === 'free' || ov === 'pro' || ov === 'ultra') return ov as Plan
+  return (userPlan ?? 'free') as Plan
+}
+
+// font scale helpers (เก็บใน CSS var + localStorage)
+function readScale(): number {
+  const raw = localStorage.getItem('bp:scale')
+  const n = raw ? Number(raw) : 1
+  return Number.isFinite(n) ? Math.min(1.4, Math.max(0.8, n)) : 1
+}
+function applyScale(n: number) {
+  const v = Math.min(1.4, Math.max(0.8, n))
+  document.documentElement.style.setProperty('--bp-font-scale', String(v))
+  localStorage.setItem('bp:scale', String(v))
+}
 
 export default function HeaderNav() {
-  // รองรับทั้งโค้ดเดิม/ใหม่ (logout หรือ signOut)
   const auth = useAuth() as any
   const user = auth?.user ?? null
-  const plan: 'free' | 'pro' | 'ultra' = (user?.plan ?? 'free') as any
+  const plan = getEffectivePlan(user?.plan)
   const isProOrUltra = plan === 'pro' || plan === 'ultra'
+
+  React.useEffect(() => { applyScale(readScale()) }, [])
 
   const handleLogout = React.useCallback(async () => {
     try {
@@ -43,9 +62,9 @@ export default function HeaderNav() {
             className="hidden sm:flex items-center gap-1 rounded-lg border border-gold/60 bg-white/5 px-2 py-1 shadow-[0_0_0_1px_rgba(212,175,55,0.25),0_6px_18px_rgba(0,0,0,0.18)]"
             title="ปรับขนาดตัวอักษรทั้งเว็บไซต์ (PRO/ULTRA)"
           >
-            <span className="px-2 py-1 text-xs">A-</span>
-            <span className="px-2 py-1 text-xs">A</span>
-            <span className="px-2 py-1 text-xs">A+</span>
+            <button onClick={() => applyScale(readScale() - 0.05)} className="px-2 py-1 text-xs">A-</button>
+            <button onClick={() => applyScale(1)} className="px-2 py-1 text-xs">A</button>
+            <button onClick={() => applyScale(readScale() + 0.05)} className="px-2 py-1 text-xs">A+</button>
           </div>
         )}
 
