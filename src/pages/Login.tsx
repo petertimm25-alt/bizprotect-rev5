@@ -1,31 +1,26 @@
-// src/pages/Login.tsx
 import React from 'react'
 import { useAuth } from '../lib/auth'
 
 export default function Login() {
   const { signInWithEmail, loading, envReady, envError } = useAuth()
   const [email, setEmail] = React.useState('')
-  const [msg, setMsg] = React.useState<string | null>(null)
-  const [err, setErr] = React.useState<string | null>(null)
   const [submitting, setSubmitting] = React.useState(false)
+  const [note, setNote] = React.useState<string | null>(null)
+  const [err, setErr] = React.useState<string | null>(null)
 
   const BASE = (import.meta as any)?.env?.BASE_URL || '/'
   const LOGO_URL = `${BASE}brand/BizProtectLogo.png`
 
-  async function onSubmit(e: React.FormEvent) {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setMsg(null); setErr(null)
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-      setErr('กรุณากรอกอีเมลให้ถูกต้อง')
-      return
-    }
+    setErr(null); setNote(null)
+    if (!/^\S+@\S+\.\S+$/.test(email)) { setErr('กรุณากรอกอีเมลให้ถูกต้อง'); return }
     try {
-      if (!envReady) throw new Error(envError)
       setSubmitting(true)
       await signInWithEmail(email.trim())
-      setMsg('ส่งลิงก์เข้าใช้งานไปที่อีเมลแล้ว กรุณาตรวจสอบกล่องจดหมาย')
+      setNote('ส่งลิงก์เข้าใช้งานไปที่อีเมลแล้ว โปรดเช็กกล่องจดหมาย')
     } catch (e: any) {
-      setErr(e?.message || 'ส่งลิงก์ไม่สำเร็จ')
+      setErr(e?.message || 'ไม่สามารถส่งลิงก์ได้')
     } finally {
       setSubmitting(false)
     }
@@ -37,14 +32,14 @@ export default function Login() {
         <div className="flex flex-col items-center mb-7">
           <img src={LOGO_URL} alt="BizProtect" className="h-20 w-auto object-contain" />
           <h1 className="mt-3 text-2xl font-semibold tracking-wide text-[#D4AF37]">BizProtect</h1>
-          <p className="mt-1 text-sm text-white/60">เข้าสู่ระบบเพื่อใช้งาน</p>
+          <p className="mt-1 text-sm text-white/60">เข้าสู่ระบบเพื่อใช้งานแผน Free / Pro / Ultra</p>
         </div>
 
         <div className="rounded-2xl bg-[#0D1424]/80 backdrop-blur-xl ring-1 ring-[#D4AF37]/25 shadow-[0_24px_90px_rgba(212,175,55,0.10)]">
           <div className="p-6 sm:p-7">
             {!envReady && (
               <div className="mb-4 rounded-lg bg-red-500/10 text-red-300 text-xs p-3">
-                {envError}
+                {envError || 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local แล้วรีสตาร์ท dev server'}
               </div>
             )}
 
@@ -56,10 +51,9 @@ export default function Login() {
                 onChange={(e) => setEmail(e.currentTarget.value)}
                 placeholder="your@email.com"
                 className="w-full rounded-xl border border-white/10 bg-[#0b1220] text-white placeholder-white/40 px-4 py-3 outline-none focus:ring-2 focus:ring-[#D4AF37]/40 focus:border-[#D4AF37]/40"
-                autoFocus
                 required
+                autoFocus
               />
-
               <button
                 type="submit"
                 disabled={submitting || loading || !envReady}
@@ -69,7 +63,7 @@ export default function Login() {
               </button>
             </form>
 
-            {msg && <p className="mt-4 text-xs text-emerald-400">{msg}</p>}
+            {note && <p className="mt-4 text-xs text-emerald-400">{note}</p>}
             {err && <p className="mt-4 text-xs text-red-400">{err}</p>}
           </div>
         </div>

@@ -8,25 +8,33 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   ['transition-colors', isActive ? 'text-gold' : 'text-[color:var(--ink)] hover:text-gold'].join(' ')
 
 export default function HeaderNav() {
-  const { user, logout } = useAuth()
-  const plan = user?.plan ?? 'free'
+  // รองรับได้ทั้งโค้ดใหม่ (signOut) และโค้ดเดิม (logout)
+  const auth = useAuth() as any
+  const user = auth?.user ?? null
+  const plan: 'free' | 'pro' | 'ultra' = (user?.plan ?? 'free') as any
   const isProOrUltra = plan === 'pro' || plan === 'ultra'
+
+  const handleLogout = React.useCallback(async () => {
+    try {
+      if (typeof auth?.signOut === 'function') await auth.signOut()
+      else if (typeof auth?.logout === 'function') await auth.logout()
+    } catch {}
+  }, [auth])
 
   return (
     <header className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2" aria-label="BizProtect Home">
-        <img src={`${BASE}brand/BizProtectLogo.png`} alt="BizProtect" className="h-20 w-20 object-contain" />
-        <span className="text-2xl font-semibold text-gold">BizProtect</span>
+      <Link to="/dashboard" className="flex items-center gap-2" aria-label="BizProtect Home">
+        <img src={`${BASE}brand/BizProtectLogo.png`} alt="BizProtect" className="h-10 w-10 object-contain" />
+        <span className="text-xl sm:text-2xl font-semibold text-gold">BizProtect</span>
       </Link>
 
-      <nav className="flex items-center gap-8">
-        <NavLink to="/" className={linkClass}>Dashboard</NavLink>
+      <nav className="flex items-center gap-6 sm:gap-8">
+        <NavLink to="/dashboard" className={linkClass}>Dashboard</NavLink>
         <NavLink to="/pricing" className={linkClass}>Plan</NavLink>
         <NavLink to="/knowledge" className={linkClass}>ข้อหารือกรมสรรพากร</NavLink>
       </nav>
 
       <div className="flex items-center gap-3">
-        {/* ปุ่มปรับฟอนต์: แสดงเฉพาะ PRO/ULTRA */}
         {isProOrUltra && (
           <div
             className="hidden sm:flex items-center gap-1 rounded-lg border border-gold/60 bg-white/5 px-2 py-1 shadow-[0_0_0_1px_rgba(212,175,55,0.25),0_6px_18px_rgba(0,0,0,0.18)]"
@@ -40,10 +48,13 @@ export default function HeaderNav() {
 
         {user ? (
           <>
-            <span className="text-xs px-2 py-1 rounded bg-white/10 ring-1 ring-white/15">
-              {user.name} • {plan.toUpperCase()}
+            <span className="text-[11px] sm:text-xs px-2 py-1 rounded bg-white/10 ring-1 ring-white/15">
+              {user.email ?? 'ผู้ใช้'} • {String(plan).toUpperCase()}
             </span>
-            <button onClick={logout} className="text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10">
+            <button
+              onClick={handleLogout}
+              className="text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10"
+            >
               Logout
             </button>
           </>
