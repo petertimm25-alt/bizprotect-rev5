@@ -166,3 +166,6 @@ input::placeholder, textarea::placeholder {
 
 /* กลุ่มปุ่มในแถบนำทาง */
 .bp-nav{ display:flex; align-items:center; gap:.75rem }
+
+html { scroll-behavior: smooth; }
+

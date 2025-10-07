@@ -44,7 +44,7 @@ export default function Login() {
         <img
           src="public/brand/BizProtectLogo.png"
           alt="BizProtect"
-          className="h-16 w-16 rounded-full border border-white/15 shadow mb-3"
+          className="h-20 w-20 rounded-full border border-white/15 shadow mb-3"
         />
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--brand-accent)' }}>เข้าสู่ระบบ</h1>
         <p className="mt-1 text-white/70 text-sm">Keyman Corporate Policy Calculator</p>
@@ -61,7 +61,7 @@ export default function Login() {
         noValidate
       >
         <label className="block">
-          <div className="mb-1 text-white/75">อีเมล</div>
+          <div className="mb-1 text-gold-2">อีเมล</div>
           <input
             id="email"
             type="email"

@@ -4,19 +4,18 @@ import { createClient, type User } from '@supabase/supabase-js'
 type Plan = 'free' | 'pro' | 'ultra'
 export type UserLite = { id: string; email: string | null; name?: string | null; plan?: Plan }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null
 
-// ✅ ใช้ override เฉพาะ development เท่านั้น
+// ===== Dev override for plan (Method A) =====
 const readPlanOverride = (): Plan | null => {
-  if (import.meta.env.MODE !== 'development') return null
   if (typeof window === 'undefined') return null
-  const v = (localStorage.getItem('bp:plan') || '').toLowerCase()
-  return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
+  const v = localStorage.getItem('bp:plan')
+  return v === 'free' || v === 'pro' || v === 'ultra' ? v : null
 }
 
 function mapUser(u: User | null): UserLite | null {
@@ -51,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const envError = envReady ? undefined : 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local'
 
   React.useEffect(() => {
-    let unsub: (() => void) | undefined
+    let sub: ReturnType<NonNullable<typeof supabase>['auth']['onAuthStateChange']> | undefined
 
     async function boot() {
       if (!supabase) { setLoading(false); return }
@@ -59,13 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(mapUser(session?.user ?? null))
       setLoading(false)
 
-      const sub = supabase.auth.onAuthStateChange((_evt, sess) => {
+      sub = supabase.auth.onAuthStateChange((_evt, sess) => {
         setUser(mapUser(sess?.user ?? null))
       })
-      unsub = () => sub.data.subscription.unsubscribe()
     }
     boot()
-    return () => unsub?.()
+    return () => sub?.data.subscription.unsubscribe()
   }, [])
 
   const signInWithEmail = async (email: string) => {

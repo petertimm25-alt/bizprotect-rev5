@@ -1,17 +1,14 @@
-// src/components/Hero.tsx
 import React from "react";
-import { Link } from "react-router-dom";
 import Card from "./Card";
 
-const BASE = (import.meta as any)?.env?.BASE_URL || "/";
+const BASE = import.meta.env.BASE_URL || "/";
 
 export default function Hero() {
   return (
     <section className="hero-wrap">
       <div className="max-w-6xl mx-auto px-6 md:px-10 py-12 md:py-16">
-        {/* ✅ ใช้ Card หุ้มเนื้อหา (กรอบทอง + โกลว์ + พื้น gradient) */}
-        <Card className="text-center px-6 py-12 md:px-10 md:py-16">
-          {/* โลโก้ด้านบนสุด */}
+        <Card className="text-center md:px-10 md:py-16 px-6 py-12">
+          {/* โลโก้ */}
           <div className="flex justify-center">
             <img
               src={`${BASE}brand/BizProtectLogo.png`}
@@ -20,7 +17,7 @@ export default function Hero() {
             />
           </div>
 
-          {/* แถบป้ายข้อความหลัก */}
+          {/* แถบป้าย */}
           <span className="mt-4 inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-semibold text-[color:var(--gold-2)] bg-white/10 border border-white/10">
             เครื่องมือสำหรับตัวแทนประกันธุรกิจ
           </span>
@@ -45,20 +42,20 @@ export default function Hero() {
           </p>
 
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link
-              to="/dashboard"
+            <a
+              href="/dashboard"
               className="rounded-xl px-4 py-2 bg-[var(--gold-2)] text-[#0B1B2B] font-semibold hover:brightness-95"
               title="ไปที่แคลคูเลเตอร์"
             >
               ลองใช้งานทันที
-            </Link>
+            </a>
           </div>
 
-          {/* จุดเด่น 2 ข้อ */}
+          {/* จุดเด่น */}
           <div className="grid gap-4 md:grid-cols-2 mt-8 text-center">
             {[
-              ["เห็นผลลัพธ์เร็ว", "สรุปใน 5 นาที · อัพเดทตัวเลขสดหน้างาน"],
-              ["ลดข้อโต้แย้งเรื่องภาษี", "ด้วยคลังข้อหารือลิงค์ตรงกรมสรรพากร"],
+              ["เห็นผลลัพธ์เร็ว", "สรุปใน 5 นาที · อัปเดตตัวเลขสดหน้างาน"],
+              ["ลดข้อโต้แย้งเรื่องภาษี", "ด้วยคลังข้อหารือลิงก์ตรงกรมสรรพากร"],
             ].map(([t, s]) => (
               <div
                 key={t}

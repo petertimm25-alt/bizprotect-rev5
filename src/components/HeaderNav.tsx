@@ -43,16 +43,16 @@ export default function HeaderNav() {
   return (
     <header className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2" aria-label="BizProtect Home">
-        <img src={`${BASE}brand/BizProtectLogo.png`} alt="BizProtect" className="h-10 w-10 object-contain" />
+        <img src={`${BASE}brand/BizProtectLogo.png`} alt="BizProtect" className="h-12 w-12 object-contain" />
         <span className="text-xl sm:text-2xl font-semibold" style={{ color: 'var(--brand-accent)' }}>BizProtect</span>
       </Link>
 
       {/* ปุ่มเมนูแบบ Pill */}
       <nav className="bp-nav">
-        <NavLink to="/" className={pillClass}>Home</NavLink>
-        <NavLink to="/pricing" className={pillClass}>Pricing</NavLink>
-        <NavLink to="/knowledge" className={pillClass}>Knowledge</NavLink>
+        <NavLink to="/" className={pillClass}>หน้าแรก</NavLink>
         <NavLink to="/dashboard" className={pillClass}>Calculator</NavLink>
+        <NavLink to="/pricing" className={pillClass}>แพลน</NavLink>
+        <NavLink to="/knowledge" className={pillClass}>ข้อหารือฯ</NavLink>
       </nav>
 
       <div className="bp-nav">
