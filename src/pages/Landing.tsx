@@ -1,10 +1,12 @@
+// src/pages/Landing.tsx
 import React, { useEffect } from "react";
 import Hero from "../components/Hero";
 import BenefitDeck from "../components/BenefitDeck";
 import Pricing from "./Pricing";
+import Card from '../components/Card'
 
 export default function Landing() {
-  // SEO เบื้องต้น
+  // ตั้งค่า SEO เบื้องต้น
   useEffect(() => {
     document.title =
       "Keyman Corporate Policy Calculator • BizProtect | คำนวณ PIT/Gross-Up + Export PDF";
@@ -21,7 +23,7 @@ export default function Landing() {
 
   return (
     <div className="text-white">
-      {/* HERO — โทน Navy/Gold */}
+      {/* HERO — โทน Navy/Gold ตาม CI */}
       <Hero />
 
       {/* การ์ดจุดเด่น */}
@@ -29,15 +31,26 @@ export default function Landing() {
         <BenefitDeck />
       </div>
 
-      {/* เหมาะกับใคร */}
+      {/* เหมาะกับใคร (สรุปสั้น) */}
       <section className="mt-16 md:mt-24">
         <div className="max-w-6xl mx-auto px-6 md:px-10">
-          <h2 className="text-2xl md:text-3xl font-semibold text-gold">เหมาะกับใคร</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold text-[var(--brand-accent)]">
+            เหมาะกับใคร
+          </h2>
           <div className="grid gap-4 md:grid-cols-3 mt-4">
             {[
-              { h: "ผู้บริหาร/เจ้าของกิจการ", p: "อยากเห็นผลกระทบภาษีและเงินสุทธิก่อนตัดสินใจซื้อ" },
-              { h: "ตัวแทน/ที่ปรึกษา", p: "ต้องมีตัวเลขชัด ๆ ในห้องประชุมเพื่อปิดดีลไว" },
-              { h: "ฝ่ายบัญชี/การเงิน", p: "ต้องการเอกสารประกอบการตัดสินใจในรูปแบบสวยอ่านง่าย" },
+              {
+                h: "ผู้บริหาร/เจ้าของกิจการ",
+                p: "อยากเห็นผลกระทบภาษีและเงินสุทธิก่อนตัดสินใจซื้อ",
+              },
+              {
+                h: "ตัวแทน/ที่ปรึกษา",
+                p: "ต้องมีตัวเลขชัด ๆ ในห้องประชุมเพื่อปิดดีลไว",
+              },
+              {
+                h: "ฝ่ายบัญชี/การเงิน",
+                p: "ต้องการเอกสารประกอบการตัดสินใจในรูปแบบสวยอ่านง่าย",
+              },
             ].map((x) => (
               <article
                 key={x.h}
@@ -47,7 +60,9 @@ export default function Landing() {
                     "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
                 }}
               >
-                <h3 className="text-lg font-semibold text-gold">{x.h}</h3>
+                <h3 className="text-lg font-semibold text-[var(--brand-accent)]">
+                  {x.h}
+                </h3>
                 <p className="text-white/85 mt-2">{x.p}</p>
               </article>
             ))}

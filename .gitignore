@@ -12,6 +12,7 @@ build/
 
 # env / secrets
 .env
+.env.local
 .env.*
 !.env.example
 
@@ -19,3 +20,4 @@ build/
 .DS_Store
 *.log
 coverage/
+.DS_Store

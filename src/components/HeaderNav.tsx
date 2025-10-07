@@ -1,24 +1,22 @@
-// src/components/HeaderNav.tsx
 import React from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const BASE = (import.meta as any)?.env?.BASE_URL || '/'
 
-// ใช้กับ NavLink ให้เป็นปุ่ม pill
-const pillClass = ({ isActive }: { isActive: boolean }) =>
+// รองรับ React Router v6 (className เป็นฟังก์ชัน)
+const pillClass = ({ isActive }: { isActive: boolean; isPending?: boolean; isTransitioning?: boolean }) =>
   ['bp-btn', isActive ? 'bp-btn--active' : ''].join(' ')
 
 type Plan = 'free' | 'pro' | 'ultra'
 function getEffectivePlan(userPlan?: Plan | null): Plan {
-  const ov = (typeof window !== 'undefined' ? localStorage.getItem('bp:plan') : '') || ''
-  const low = ov.toLowerCase()
-  if (low === 'free' || low === 'pro' || low === 'ultra') return low as Plan
+  const ov = (localStorage.getItem('bp:plan') || '').toLowerCase()
+  if (ov === 'free' || ov === 'pro' || ov === 'ultra') return ov as Plan
   return (userPlan ?? 'free') as Plan
 }
 function readScale(): number {
-  const raw = (typeof window !== 'undefined' ? localStorage.getItem('bp:scale') : '') || '1'
-  const n = Number(raw)
+  const raw = localStorage.getItem('bp:scale')
+  const n = raw ? Number(raw) : 1
   return Number.isFinite(n) ? Math.min(1.4, Math.max(0.8, n)) : 1
 }
 function applyScale(n: number) {
@@ -45,15 +43,15 @@ export default function HeaderNav() {
   return (
     <header className="mx-auto max-w-6xl px-6 py-6 flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2" aria-label="BizProtect Home">
-        <img src={`${BASE}brand/BizProtectLogo.png`} alt="BizProtect" className="h-10 w-10 object-contain" />
-        <span className="text-xl sm:text-2xl font-semibold text-gold">BizProtect</span>
+        <img src={`${BASE}brand/BizProtectLogo.png`} alt="BizProtect" className="h-12 w-12 object-contain" />
+        <span className="text-xl sm:text-2xl font-semibold" style={{ color: 'var(--brand-accent)' }}>BizProtect</span>
       </Link>
 
-      {/* เมนูแบบปุ่ม Pill */}
+      {/* ปุ่มเมนูแบบ Pill */}
       <nav className="bp-nav">
-        <NavLink to="/" className={pillClass}>Home</NavLink>
-        <NavLink to="/pricing" className={pillClass}>Pricing</NavLink>
+        <NavLink to="/" className={pillClass}>หน้าแรก</NavLink>
         <NavLink to="/dashboard" className={pillClass}>Calculator</NavLink>
+        <NavLink to="/pricing" className={pillClass}>แพลน</NavLink>
         <NavLink to="/knowledge" className={pillClass}>ข้อหารือฯ</NavLink>
       </nav>
 

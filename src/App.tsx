@@ -1,4 +1,3 @@
-// src/App.tsx
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
@@ -7,11 +6,10 @@ import AppShell from './layouts/AppShell'
 import Login from './pages/Login'
 import AuthCallback from './pages/AuthCallback'
 import Pricing from './pages/Pricing'
-import Dashboard from './pages/Dashboard'
 import Landing from './pages/Landing'
+import Dashboard from './pages/Dashboard'     // ถ้าคุณใช้ UnifiedDashboard เปลี่ยน import ตรงนี้
 import Knowledge from './pages/Knowledge'
 import PrivateRoute from './routes/PrivateRoute'
-import PlanGuard from './routes/PlanGuard'
 
 export default function App() {
   return (
@@ -26,15 +24,7 @@ export default function App() {
           {/* ต้องล็อกอินก่อนเข้าหน้าในกลุ่มนี้ */}
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            {/* ต้องเป็น ULTRA เท่านั้น — ไม่มี redirect เพื่อกันอาการกระพริบ */}
-            <Route
-              path="/knowledge"
-              element={
-                <PlanGuard requirePlan="ultra">
-                  <Knowledge />
-                </PlanGuard>
-              }
-            />
+            <Route path="/knowledge" element={<Knowledge />} />
           </Route>
         </Route>
 

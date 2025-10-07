@@ -11,12 +11,31 @@ import { hasFeature } from '../lib/roles'
 import { canExportNow, noteExport, getRemaining } from '../lib/exportQuota'
 import { toast } from '../lib/toast'
 
+/* -------------------- Safe asset resolver (กันพาธเพี้ยน) -------------------- */
+function getBaseUrl(): string {
+  // ใช้ค่าจาก Vite ถ้ามี
+  try {
+    const b = (import.meta as any)?.env?.BASE_URL ?? (import.meta as any)?.env?.BASE
+    if (typeof b === 'string' && b.length) return b.endsWith('/') ? b : b + '/'
+  } catch {}
+  // ลองอ่าน <base href="...">
+  try {
+    const href = document.querySelector('base')?.getAttribute('href') || '/'
+    return href.endsWith('/') ? href : href + '/'
+  } catch {}
+  return '/'
+}
+function asset(path: string) {
+  const base = getBaseUrl()
+  return base + path.replace(/^\//, '')
+}
+const BASE = getBaseUrl()
+
 /* -------------------- Assets / Fonts -------------------- */
-const BASE = (import.meta as any)?.env?.BASE_URL || '/'
-const F_REG = `${BASE}fonts/IBMPlexSansThaiLooped-Regular.ttf`
-const F_SEMI = `${BASE}fonts/IBMPlexSansThaiLooped-SemiBold.ttf`
-const F_BOLD = `${BASE}fonts/IBMPlexSansThaiLooped-Bold.ttf`
-const BP_LOGO = `${BASE}brand/BizProtectLogo.png`
+const F_REG  = asset('fonts/IBMPlexSansThaiLooped-Regular.ttf')
+const F_SEMI = asset('fonts/IBMPlexSansThaiLooped-SemiBold.ttf')
+const F_BOLD = asset('fonts/IBMPlexSansThaiLooped-Bold.ttf')
+const BP_LOGO = asset('brand/BizProtectLogo.png')
 
 try {
   Font.register({
@@ -53,16 +72,8 @@ const styles = StyleSheet.create({
     color: THEME.ink,
     backgroundColor: THEME.pageBg,
   },
-
-  // ✅ กันพื้นที่ใต้โลโก้/หัวกระดาษเท่ากันทุกหน้า
-  content: {
-    marginTop: 20,
-  },
-
-  // ✅ เว้นหัวเมื่อ "ตัดไปหน้าใหม่"
-  afterBreakTopGap: {
-    marginTop: 28,
-  },
+  content: { marginTop: 20 },
+  afterBreakTopGap: { marginTop: 28 },
 
   h1: { fontSize: 12, fontWeight: 700, marginBottom: 6, color: THEME.ink },
   h2: { fontSize: 10, fontWeight: 600, marginTop: 10, marginBottom: 4, color: THEME.ink },
@@ -74,7 +85,6 @@ const styles = StyleSheet.create({
 
   card: { ...border, borderWidth: 1, borderRadius: 6, padding: 8, marginBottom: 8, backgroundColor: '#FFFFFF' },
 
-  /* -------- ตาราง: มุมโค้งจาก container + ปิดเส้นแถวท้าย -------- */
   table: {
     marginTop: 4,
     ...border,
@@ -100,26 +110,10 @@ const styles = StyleSheet.create({
     textAlign: 'center', color: THEME.inkDim, fontSize: 9,
   },
 
-  // watermark (Free เท่านั้น)
-  wmBox: {
-    position: 'absolute',
-    top: '28%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    opacity: THEME.watermarkOpacity,
-  },
+  wmBox: { position: 'absolute', top: '28%', left: 0, right: 0, alignItems: 'center', opacity: THEME.watermarkOpacity },
   wmImg: { width: 380, height: 380, objectFit: 'contain' },
 
-  // brand logo (Ultra เท่านั้น)
-  brand: {
-    position: 'absolute',
-    top: 10,
-    right: 19,
-    width: 40,
-    objectFit: 'contain',
-    opacity: 0.95,
-  },
+  brand: { position: 'absolute', top: 10, right: 19, width: 40, objectFit: 'contain', opacity: 0.95 },
 
   presenterRow: { flexDirection: 'row', gap: 8 },
   presenterCol: { flex: 1 },
@@ -128,16 +122,7 @@ const styles = StyleSheet.create({
   presenterLabel: { color: THEME.inkDim, minWidth: 90 },
   presenterValue: { flex: 1, textAlign: 'left' },
 
-  // "แบบประกันฯ แนะนำ"
-  planBox: {
-    ...border,
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 8,
-    backgroundColor: '#FFFFFF',
-    marginTop: 6,
-    marginBottom: 6,
-  },
+  planBox: { ...border, borderWidth: 1, borderRadius: 6, padding: 8, backgroundColor: '#FFFFFF', marginTop: 6, marginBottom: 6 },
   planTitle: { fontSize: 10, fontWeight: 600, color: THEME.ink, marginBottom: 2 },
   planText: { fontSize: 9, color: THEME.gold, fontWeight: 600 },
 })
@@ -148,7 +133,6 @@ const fmt = (n?: number) =>
     ? '-'
     : n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-/** แบ่งอาร์เรย์เป็นหน้า ๆ: หน้าแรกใช้ sizeFirst, หน้าถัดไปใช้ sizeNext */
 function chunkRows<T>(rows: T[], sizeFirst: number, sizeNext: number): T[][] {
   if (rows.length <= sizeFirst) return [rows]
   const pages: T[][] = []
@@ -192,10 +176,7 @@ function buildComputed(state: AppState) {
     const surrenderAge60 = (d as any)?.surrenderAge60
     const surrenderAge70 = (d as any)?.surrenderAge70
     const surrenderAge99 = (d as any)?.surrenderAge99
-    return {
-      id: d.id, name: d.name, base, prem, g, rate, pit1, net1, pit3, net3,
-      sumAssured, surrenderY7, surrenderAge60, surrenderAge70, surrenderAge99,
-    }
+    return { id: d.id, name: d.name, base, prem, g, rate, pit1, net1, pit3, net3, sumAssured, surrenderY7, surrenderAge60, surrenderAge70, surrenderAge99 }
   })
   const totalGrossUp = gus.reduce((s, g) => s + g.g, 0)
 
@@ -220,13 +201,10 @@ function buildComputed(state: AppState) {
   const taxSaved_afterPrem = Math.max(0, trueTax_before - trueTax_afterPrem)
   const taxSaved_afterPremGross = Math.max(0, trueTax_before - trueTax_afterPremGross)
 
-  const taxSavedPct_afterPrem =
-    trueTax_before > 0 ? (taxSaved_afterPrem / trueTax_before) * 100 : 0
-  const taxSavedPct_afterPremGross =
-    trueTax_before > 0 ? (taxSaved_afterPremGross / trueTax_before) * 100 : 0
+  const taxSavedPct_afterPrem = trueTax_before > 0 ? (taxSaved_afterPrem / trueTax_before) * 100 : 0
+  const taxSavedPct_afterPremGross = trueTax_before > 0 ? (taxSaved_afterPremGross / trueTax_before) * 100 : 0
 
-  const presenter =
-    (state as any)?.presenter || { name: '', phone: '', email: '', company: '', licenseNo: '', logoDataUrl: undefined }
+  const presenter = (state as any)?.presenter || { name: '', phone: '', email: '', company: '', licenseNo: '', logoDataUrl: undefined }
 
   return {
     c, ds, gus,
@@ -255,49 +233,30 @@ function PageWithBrand({
 }) {
   return (
     <Page size="A4" style={styles.page}>
-      {/* ✅ คอนเทนต์: มี safe-top แล้ว */}
-      <View style={styles.content}>
-        {children}
-      </View>
+      <View style={styles.content}>{children}</View>
 
-      {/* วอเตอร์มาร์กแบบ fixed */}
       {showWatermark && (
         <View style={styles.wmBox} fixed>
           <Image src={BP_LOGO} style={styles.wmImg} />
         </View>
       )}
 
-      {/* หมายเลขหน้า */}
       <Text style={styles.pageNum} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
-
-      {/* ✅ โลโก้บริษัท (ลอยบนสุดเสมอ) */}
       {brandLogo ? <Image src={brandLogo} style={styles.brand} fixed /> : null}
     </Page>
   )
 }
 
 /* -------------------- PDF Doc -------------------- */
-function ProposalPDF({
-  state,
-  plan,
-}: {
-  state: AppState
-  plan: 'free' | 'pro' | 'ultra'
-}) {
+function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 'ultra' }) {
   const v = buildComputed(state)
-
   const showWatermark = plan === 'free'
-  const brandLogo =
-    plan === 'ultra' && v.presenter?.logoDataUrl
-      ? (v.presenter.logoDataUrl as string)
-      : undefined
+  const brandLogo = plan === 'ultra' && v.presenter?.logoDataUrl ? (v.presenter.logoDataUrl as string) : undefined
 
-  // ค่าจาก Dashboard (static ตอนนี้)
   const productName = 'My Style Legacy Ultra (Unit Linked)'
   const payYears = 7
   const coverageAge = 99
 
-  // ค่าจำนวนแถวต่อหน้า (กันพื้นที่)
   const ROWS_FIRST_PAGE_A = 10
   const ROWS_NEXT_PAGE_A  = 18
   const ROWS_FIRST_PAGE_B = 6
@@ -305,16 +264,7 @@ function ProposalPDF({
 
   const directorRows = v.gus.map(g => ({
     key: g.id,
-    cells: [
-      g.name || '-',
-      fmt(g.base),
-      fmt(g.pit1),
-      fmt(g.pit3),
-      fmt(g.g),
-      fmt(g.net1),
-      fmt(g.net3),
-      fmt((g as any).sumAssured ?? 0),
-    ],
+    cells: [ g.name || '-', fmt(g.base), fmt(g.pit1), fmt(g.pit3), fmt(g.g), fmt(g.net1), fmt(g.net3), fmt((g as any).sumAssured ?? 0) ],
   }))
 
   const fundRows = v.gus.map(g => {
@@ -427,94 +377,41 @@ function ProposalPDF({
       <PageWithBrand showWatermark={showWatermark} brandLogo={brandLogo}>
         {/* ตารางผู้บริหาร — แตกหลายหน้า พร้อมหัวตารางซ้ำ */}
         <Text style={styles.h2}>ตารางผู้บริหาร (ผลกระทบภาษีรายบุคคล)</Text>
-        {chunkRows(directorRows, ROWS_FIRST_PAGE_A, ROWS_NEXT_PAGE_A).map((rows, pageIdx) => (
-          <View
-            key={`dir-page-${pageIdx}`}
-            style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table}
-            break={pageIdx > 0}
-          >
-            <HeaderRow
-              headers={[
-                'ผู้บริหาร',
-                'เงินได้ ม.40(1)',
-                'PIT ก่อนฯ',
-                'PIT หลังฯ',
-                'ภาษีออกแทน',
-                'เงินสุทธิ ก่อนฯ',
-                'เงินสุทธิ หลังฯ',
-                'มีทุนประกันชีวิต',
-              ]}
-            />
+        {chunkRows(directorRows, 10, 18).map((rows, pageIdx) => (
+          <View key={`dir-page-${pageIdx}`} style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table} break={pageIdx > 0}>
+            <HeaderRow headers={['ผู้บริหาร','เงินได้ ม.40(1)','PIT ก่อนฯ','PIT หลังฯ','ภาษีออกแทน','เงินสุทธิ ก่อนฯ','เงินสุทธิ หลังฯ','มีทุนประกันชีวิต']} />
             {rows.length === 0 ? (
               <View style={[styles.tr, styles.noBottom]}>
-                <Text style={[styles.td, { flex: 8, textAlign: 'center', color: THEME.inkDim }]}>
-                  ยังไม่มีข้อมูลผู้บริหาร
-                </Text>
+                <Text style={[styles.td, { flex: 8, textAlign: 'center', color: THEME.inkDim }]}>ยังไม่มีข้อมูลผู้บริหาร</Text>
               </View>
-            ) : (
-              <BodyRows rows={rows} />
-            )}
+            ) : (<BodyRows rows={rows} />)}
           </View>
         ))}
 
-        {/* ทุนประกันฯ & เบี้ย — แตกหลายหน้า พร้อมหัวตารางซ้ำ (แก้เฉพาะตารางนี้) */}
+        {/* ทุนประกันฯ & เบี้ย — แตกหลายหน้า พร้อมหัวตารางซ้ำ */}
         <View style={{ marginTop: 10 }}>
           <Text style={styles.h2}>ทุนประกันฯ & เบี้ย ของผู้บริหารรายบุคคล • สมมุติผลตอบแทนจากการลงทุนที่ 5%</Text>
 
-          {/* Box: แบบประกันฯ แนะนำ */}
           <View style={styles.planBox}>
             <Text style={styles.planTitle}>แบบประกันฯ แนะนำ </Text>
-            <Text style={styles.planText}>
-              {productName}
-            </Text>
-            <Text style={styles.planText}>
-              ชำระเบี้ย {payYears} ปี
-            </Text>
-            <Text style={styles.planText}>
-              คุ้มครองถึงอายุ {coverageAge} ปี
-            </Text>
+            <Text style={styles.planText}>My Style Legacy Ultra (Unit Linked)</Text>
+            <Text style={styles.planText}>ชำระเบี้ย 7 ปี</Text>
+            <Text style={styles.planText}>คุ้มครองถึงอายุ 99 ปี</Text>
           </View>
 
           <Text style={styles.note}>** มูลค่ารับซื้อคืนหน่วยลงทุนในช่วงเวลาต่างๆ</Text>
 
-          {/*
-            ✅ Widow-control เฉพาะ "ทุนประกันฯ & เบี้ย":
-            - ถ้ามี >= 7 คน หน้าแรกของตารางนี้ให้แสดง 6 แถว
-            - ก้อนถัดไป (รวม header) จะถูก "ยกทั้งก้อน" ไปหน้าใหม่ เพราะ wrap={false}
-          */}
-          {chunkRows(
-            fundRows,
-            fundRows.length >= 7 ? 6 : ROWS_FIRST_PAGE_B,
-            ROWS_NEXT_PAGE_B
-          ).map((rows, pageIdx) => (
-            <View
-              key={`fund-page-${pageIdx}`}
-              style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table}
-              break={pageIdx > 0}
-              wrap={false}
-            >
-              <HeaderRow
-                headers={[
-                  'ผู้บริหาร',
-                  'ทุนประกันชีวิต',
-                  'เบี้ย/ปี',
-                  'เบี้ยสะสม ปีที่ 7',
-                  '**กรมฯ ปีที่ 7',
-                  '**อายุ 60 ปี',
-                  '**อายุ 70 ปี',
-                  '**อายุ 99 ปี',
-                ]}
-              />
+          {chunkRows(fundRows, fundRows.length >= 7 ? 6 : 6, 18).map((rows, pageIdx) => (
+            <View key={`fund-page-${pageIdx}`} style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table} break={pageIdx > 0} wrap={false}>
+              <HeaderRow headers={['ผู้บริหาร','ทุนประกันชีวิต','เบี้ย/ปี','เบี้ยสะสม ปีที่ 7','**กรมฯ ปีที่ 7','**อายุ 60 ปี','**อายุ 70 ปี','**อายุ 99 ปี']} />
               <BodyRows rows={rows} />
             </View>
           ))}
 
-          <Text style={styles.note}>
-            * ตัวอย่างที่แสดงข้างต้นคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จาก แอปพลิเคชั่น AZD
-          </Text>
+          <Text style={styles.note}>* ตัวอย่างที่แสดงข้างต้นคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จาก แอปพลิเคชั่น AZD</Text>
         </View>
 
-        {/* อ้างอิงข้อหารือ (ไม่ให้ตัดหน้า) */}
+        {/* อ้างอิงข้อหารือ */}
         <View style={[styles.card, { marginTop: 15 }]} wrap={false}>
           <Text style={styles.h2}>ข้อหารือสรรพากรที่เกี่ยวข้อง</Text>
           {RULINGS.slice(0, 2).map((r, i) => (
@@ -526,7 +423,7 @@ function ProposalPDF({
           ))}
         </View>
 
-        {/* ข้อกำกับ / Compliance (ไม่ให้ตัดหน้า) */}
+        {/* Compliance */}
         <View style={styles.card} wrap={false}>
           <Text style={styles.h2}>ข้อกำกับ / Compliance</Text>
           <Text style={styles.note}>
@@ -543,36 +440,17 @@ function ProposalPDF({
 
         {/* ผู้เสนอ — Pro/Ultra เท่านั้น */}
         {hasFeature(plan, 'agent_identity_on_pdf') && (
-          <View
-            style={[styles.card, styles.afterBreakTopGap]}
-            wrap={false}
-            break
-          >
+          <View style={[styles.card, styles.afterBreakTopGap]} wrap={false} break>
             <Text style={styles.h2}>ผู้เสนอ</Text>
             <View style={styles.presenterRow}>
               <View style={styles.presenterCol}>
-                <View style={styles.presenterKV}>
-                  <Text style={styles.presenterLabel}>ชื่อผู้เสนอ</Text>
-                  <Text style={styles.presenterValue}>{v.presenter?.name || '-'}</Text>
-                </View>
-                <View style={styles.presenterKV}>
-                  <Text style={styles.presenterLabel}>เบอร์โทร</Text>
-                  <Text style={styles.presenterValue}>{v.presenter?.phone || '-'}</Text>
-                </View>
-                <View style={styles.presenterKV}>
-                  <Text style={styles.presenterLabel}>อีเมล</Text>
-                  <Text style={styles.presenterValue}>{v.presenter?.email || '-'}</Text>
-                </View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>ชื่อผู้เสนอ</Text><Text style={styles.presenterValue}>{v.presenter?.name || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>เบอร์โทร</Text><Text style={styles.presenterValue}>{v.presenter?.phone || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>อีเมล</Text><Text style={styles.presenterValue}>{v.presenter?.email || '-'}</Text></View>
               </View>
               <View style={styles.presenterCol}>
-                <View style={styles.presenterKV}>
-                  <Text style={styles.presenterLabel}>บริษัท</Text>
-                  <Text style={styles.presenterValue}>{(v.presenter as any)?.company || '-'}</Text>
-                </View>
-                <View style={styles.presenterKV}>
-                  <Text style={styles.presenterLabel}>เลขที่ใบอนุญาต</Text>
-                  <Text style={styles.presenterValue}>{(v.presenter as any)?.licenseNo || '-'}</Text>
-                </View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>บริษัท</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.company || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>เลขที่ใบอนุญาต</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.licenseNo || '-'}</Text></View>
               </View>
             </View>
           </View>
@@ -611,11 +489,7 @@ export default function ExportPDF({ state }: { state: AppState }) {
     URL.revokeObjectURL(url)
 
     noteExport(user.id, plan)
-    toast(
-      remaining === null
-        ? 'ดาวน์โหลดแล้ว (ไม่จำกัดโควตา)'
-        : `ดาวน์โหลดแล้ว • เหลือ ${Math.max(0, (remaining ?? 0) - 1)} ครั้งในเดือนนี้`
-    )
+    toast(remaining === null ? 'ดาวน์โหลดแล้ว (ไม่จำกัดโควตา)' : `ดาวน์โหลดแล้ว • เหลือ ${Math.max(0, (remaining ?? 0) - 1)} ครั้งในเดือนนี้`)
   }
 
   return (
@@ -648,7 +522,10 @@ export default function ExportPDF({ state }: { state: AppState }) {
               <BlobProvider document={<ProposalPDF state={state} plan={plan} />}>
                 {({ url, loading, error }) => {
                   if (loading) return <div className="p-6 text-center text-sm">กำลังสร้างตัวอย่าง…</div>
-                  if (error) return <div className="p-6 text-center text-sm text-red-400">สร้างตัวอย่างไม่สำเร็จ</div>
+                  if (error) {
+                    console.error('PDF preview error:', error)
+                    return <div className="p-6 text-center text-sm text-red-400">สร้างตัวอย่างไม่สำเร็จ</div>
+                  }
                   return <iframe src={url || undefined} className="w-full h-full" title="PDF Preview" />
                 }}
               </BlobProvider>
