@@ -622,7 +622,7 @@ export default function ExportPDF({ state }: { state: AppState }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2 hover:bg-white/10"
+        className="rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95"
         title="ดูตัวอย่างแล้วดาวน์โหลด"
       >
         Export PDF

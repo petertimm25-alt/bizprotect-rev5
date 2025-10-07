@@ -206,8 +206,8 @@ export default function UnifiedDashboard() {
     <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
       {/* ===== Header ===== */}
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-gold">
-          โปรแกรมจำลอง ผลประโยชน์ทางภาษีนิติบุคคล และผลกระทบทางภาษีต่อบุคคลธรรมดา<br/>จากโครงการกรมธรรม์ฯนิติบุคคล (Corporate Policy Project Scenario)
+        <h2 className="text-3xl font-semibold text-[#EBDCA6]">
+          Keyman Corporate Policy Calculator
         </h2>
         {canExport ? (
             <ExportPDF state={data} />
@@ -244,11 +244,12 @@ export default function UnifiedDashboard() {
           </label>
 
           <div className="ml-auto flex items-center gap-2">
-            <a href="#company-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปข้อมูลบริษัท</a>
-            <a href="#directors-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปผู้บริหาร</a>
-            <a href="#cit-table-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปตาราง ภ.ง.ด.50</a>
-            <a href="#return-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปผลตอบแทน</a>
-          </div>
+  <a href="#company-sec"   className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปข้อมูลบริษัท</a>
+  <a href="#directors-sec" className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปผู้บริหาร</a>
+  <a href="#cit-table-sec" className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปตาราง ภ.ง.ด.50</a>
+  <a href="#return-sec"    className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปผลตอบแทน</a>
+</div>
+
 
           
           <div className="w-full grid grid-cols-2 md:grid-cols-2 gap-3 mt-3">
@@ -316,7 +317,7 @@ export default function UnifiedDashboard() {
         <Card title="ข้อมูลบริษัท">
           <div className="mb-3 flex items-center">
             <div className="text-sm text-[color:var(--ink-dim)]">กรอกข้อมูลตั้งต้นของบริษัท</div>
-            <button onClick={handleClearCompany} className="ml-auto text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10">ล้างข้อมูล</button>
+            <button onClick={handleClearCompany} className="ml-auto text-xs bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold">ล้างข้อมูล</button>
           </div>
 
           <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
@@ -366,7 +367,7 @@ export default function UnifiedDashboard() {
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => setData(s => ({ ...s, company: { ...s.company, directors: s.company.directors.slice(0, -1) } }))}
-              className="px-3 py-1 rounded border border-gold/40 hover:text-gold disabled:opacity-40"
+              className="bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold"
               disabled={ds.length === 0}
               title={ds.length === 0 ? 'ไม่มีรายการให้ลบ' : 'ลบผู้บริหารคนสุดท้าย'}
             >
@@ -383,7 +384,7 @@ export default function UnifiedDashboard() {
                   ]
                 }
               }))}
-              className="px-3 py-1 rounded border border-gold/40 hover:text-gold disabled:opacity-40"
+              className="bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold-2"
               disabled={ds.length >= limit}
               title={ds.length < limit ? 'เพิ่มผู้บริหาร' : `ครบสูงสุด ${limit} คนแล้ว`}
             >
@@ -629,7 +630,7 @@ export default function UnifiedDashboard() {
       {/* ===== CIT Table ===== */}
       <section id="cit-table-sec" className="mt-4">
         <h3 className="text-lg font-semibold text-gold mb-3">
-          ภ.ง.ด.50 ของบริษัทจำกัด (โครงสร้างใหม่ — สื่อผลลดภาษี)
+          ภ.ง.ด.50 ของนิติบุคคล
         </h3>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm table">
@@ -745,7 +746,7 @@ export default function UnifiedDashboard() {
       {/* ===== PIT table for directors ===== */}
       {!emptyState && (
         <section className="mt-6">
-          <h3 className="text-lg font-semibold text-gold mb-3">ภ.ง.ด.91 สำหรับกรรมการ (ทุกคน)</h3>
+          <h3 className="text-lg font-semibold text-gold mb-3">ภ.ง.ด.91 สำหรับผู้บริหารรายบุคคล</h3>
           <div className="space-y-4">
             {ds.map((it, idx) => {
               const base = it.annualSalary ?? 0

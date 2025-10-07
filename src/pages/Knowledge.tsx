@@ -29,11 +29,11 @@ export default function Knowledge() {
       <div className="space-y-4">
         {RULINGS.map((r) => (
           <div key={r.docNo} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4">
-            <div className="text-sm font-semibold text-gold">
+            <div className="text-x font-semibold text-gold">
               <a href={r.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{r.docNo}</a>
             </div>
-            <div className="text-sm mt-1">เรื่อง: {r.topic}</div>
-            <div className="text-xs text-[color:var(--ink-dim)] mt-1">แนววินิจฉัย: {r.summary}</div>
+            <div className="text-x mt-1">เรื่อง: {r.topic}</div>
+            <div className="text-sm text-[color:var(--ink-dim)] mt-1">แนววินิจฉัย: {r.summary}</div>
           </div>
         ))}
       </div>
