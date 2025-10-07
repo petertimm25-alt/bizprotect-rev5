@@ -1,46 +1,30 @@
+// src/components/HeaderNav.tsx
 import React from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 
 const BASE = (import.meta as any)?.env?.BASE_URL || '/'
 
-// NavLink class แบบ pill
-const pillClass = ({
-  isActive,
-}: {
-  isActive: boolean
-  isPending: boolean
-  isTransitioning: boolean
-}) => ['bp-btn', isActive ? 'bp-btn--active' : ''].join(' ')
+// ใช้กับ NavLink ให้เป็นปุ่ม pill
+const pillClass = ({ isActive }: { isActive: boolean }) =>
+  ['bp-btn', isActive ? 'bp-btn--active' : ''].join(' ')
 
 type Plan = 'free' | 'pro' | 'ultra'
-
 function getEffectivePlan(userPlan?: Plan | null): Plan {
-  try {
-    const ov = (localStorage.getItem('bp:plan') || '').toLowerCase()
-    if (ov === 'free' || ov === 'pro' || ov === 'ultra') return ov as Plan
-  } catch {}
+  const ov = (typeof window !== 'undefined' ? localStorage.getItem('bp:plan') : '') || ''
+  const low = ov.toLowerCase()
+  if (low === 'free' || low === 'pro' || low === 'ultra') return low as Plan
   return (userPlan ?? 'free') as Plan
 }
-
 function readScale(): number {
-  try {
-    const raw = localStorage.getItem('bp:scale')
-    const n = raw ? Number(raw) : 1
-    return Number.isFinite(n) ? Math.min(1.4, Math.max(0.8, n)) : 1
-  } catch {
-    return 1
-  }
+  const raw = (typeof window !== 'undefined' ? localStorage.getItem('bp:scale') : '') || '1'
+  const n = Number(raw)
+  return Number.isFinite(n) ? Math.min(1.4, Math.max(0.8, n)) : 1
 }
-
 function applyScale(n: number) {
   const v = Math.min(1.4, Math.max(0.8, n))
-  if (typeof document !== 'undefined') {
-    document.documentElement.style.setProperty('--bp-font-scale', String(v))
-  }
-  try {
-    localStorage.setItem('bp:scale', String(v))
-  } catch {}
+  document.documentElement.style.setProperty('--bp-font-scale', String(v))
+  localStorage.setItem('bp:scale', String(v))
 }
 
 export default function HeaderNav() {
@@ -49,17 +33,13 @@ export default function HeaderNav() {
   const plan = getEffectivePlan(user?.plan)
   const isProOrUltra = plan === 'pro' || plan === 'ultra'
 
-  React.useEffect(() => {
-    applyScale(readScale())
-  }, [])
+  React.useEffect(() => { applyScale(readScale()) }, [])
 
   const handleLogout = React.useCallback(async () => {
     try {
       if (typeof auth?.signOut === 'function') await auth.signOut()
       else if (typeof auth?.logout === 'function') await auth.logout()
-    } catch {
-      /* no-op */
-    }
+    } catch {}
   }, [auth])
 
   return (
@@ -69,16 +49,16 @@ export default function HeaderNav() {
         <span className="text-xl sm:text-2xl font-semibold text-gold">BizProtect</span>
       </Link>
 
-      {/* เมนูแบบ Pill */}
+      {/* เมนูแบบปุ่ม Pill */}
       <nav className="bp-nav">
-        <NavLink to="/" className={pillClass}>หน้าแรก</NavLink>
+        <NavLink to="/" className={pillClass}>Home</NavLink>
+        <NavLink to="/pricing" className={pillClass}>Pricing</NavLink>
         <NavLink to="/dashboard" className={pillClass}>Calculator</NavLink>
-        <NavLink to="/pricing" className={pillClass}>แผน</NavLink>
-        <NavLink to="/knowledge" className={pillClass}>ข้อหารือ/อ้างอิง</NavLink>
+        <NavLink to="/knowledge" className={pillClass}>ข้อหารือฯ</NavLink>
       </nav>
 
       <div className="bp-nav">
-        {/* ปุ่มปรับฟอนต์ — เฉพาะ PRO/ULTRA */}
+        {/* ปุ่มปรับฟอนต์ — PRO/ULTRA เท่านั้น */}
         {isProOrUltra && (
           <div
             className="hidden sm:flex items-center gap-1 rounded-full border border-gold/60 bg-white/5 px-2 py-1 shadow-[0_0_0_1px_rgba(212,175,55,0.25),0_6px_18px_rgba(0,0,0,0.18)]"
