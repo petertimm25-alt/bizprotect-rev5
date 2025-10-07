@@ -1,4 +1,3 @@
-// src/lib/auth.tsx
 import React, { createContext, useContext } from 'react'
 import { createClient, type User } from '@supabase/supabase-js'
 
@@ -12,12 +11,12 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null
 
-// ---- Dev plan override (Method A): localStorage "bp:plan"
+// ✅ ใช้ override เฉพาะ development เท่านั้น
 const readPlanOverride = (): Plan | null => {
-  try {
-    const v = (typeof window !== 'undefined' && localStorage.getItem('bp:plan')) || ''
-    return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
-  } catch { return null }
+  if (import.meta.env.MODE !== 'development') return null
+  if (typeof window === 'undefined') return null
+  const v = (localStorage.getItem('bp:plan') || '').toLowerCase()
+  return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
 }
 
 function mapUser(u: User | null): UserLite | null {
@@ -39,7 +38,6 @@ type AuthContextShape = {
   envError?: string
   signInWithEmail: (email: string) => Promise<void>
   signOut: () => Promise<void>
-  // alias เพื่อรองรับโค้ดเก่า
   logout: () => Promise<void>
 }
 
@@ -53,21 +51,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const envError = envReady ? undefined : 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local'
 
   React.useEffect(() => {
-    // อย่าทำ Router ซ้อน/เด้งตอนยัง loading
-    if (!supabase) { setLoading(false); return }
+    let unsub: (() => void) | undefined
 
-    const boot = async () => {
+    async function boot() {
+      if (!supabase) { setLoading(false); return }
       const { data: { session } } = await supabase.auth.getSession()
       setUser(mapUser(session?.user ?? null))
       setLoading(false)
+
+      const sub = supabase.auth.onAuthStateChange((_evt, sess) => {
+        setUser(mapUser(sess?.user ?? null))
+      })
+      unsub = () => sub.data.subscription.unsubscribe()
     }
-
-    const sub = supabase.auth.onAuthStateChange((_evt, sess) => {
-      setUser(mapUser(sess?.user ?? null))
-    })
-
     boot()
-    return () => sub.data.subscription.unsubscribe()
+    return () => unsub?.()
   }, [])
 
   const signInWithEmail = async (email: string) => {
@@ -82,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!supabase) { setUser(null); return }
+    if (!supabase) return
     await supabase.auth.signOut()
     setUser(null)
   }

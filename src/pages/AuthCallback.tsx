@@ -1,65 +1,37 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/auth'
 
 export default function AuthCallback() {
   const nav = useNavigate()
-  const [msg, setMsg] = React.useState('กำลังตรวจสอบสิทธิ์…')
+  const loc = useLocation()
 
   React.useEffect(() => {
-    const run = async () => {
+    async function run() {
       try {
-        if (!supabase) throw new Error('Supabase ไม่พร้อม')
-
-        // รองรับทั้ง query (?code, ?token_hash) และ hash (#access_token, #code ...)
-        const search = new URLSearchParams(window.location.search)
-        const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-
-        const code = search.get('code') || hash.get('code')
-        const token_hash = search.get('token_hash') || hash.get('token_hash')
-        const type = search.get('type') || hash.get('type')
-        const access_token = hash.get('access_token')
-        const refresh_token = hash.get('refresh_token')
-
-        // 1) OAuth / PKCE: ?code=
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error) throw error
-          nav('/dashboard', { replace: true })
-          return
+        if (!supabase) throw new Error('Supabase is not ready')
+        const hash = window.location.hash
+        if (!hash || (!hash.includes('access_token') && !hash.includes('code'))) {
+          // กรณีเปิดจากอีเมลบนอุปกรณ์บางชนิด ลิงก์อาจมาแบบ query
+          const qs = new URLSearchParams(window.location.search)
+          if (!qs.get('code')) throw new Error('ลิงก์ไม่ถูกต้อง: ไม่พบ code หรือ token')
         }
-
-        // 2) Magic link: ?token_hash=&type=magiclink
-        if (token_hash) {
-          const { error } = await supabase.auth.verifyOtp({
-            type: (type as any) || 'magiclink',
-            token_hash
-          })
-          if (error) throw error
-          nav('/dashboard', { replace: true })
-          return
-        }
-
-        // 3) บางผู้ให้บริการส่งกลับแบบ hash token (implicit)
-        if (access_token && refresh_token) {
-          const { error } = await supabase.auth.setSession({ access_token, refresh_token })
-          if (error) throw error
-          nav('/dashboard', { replace: true })
-          return
-        }
-
-        // ไม่พบอะไรเลย → แจ้งชัดเจน
-        setMsg('ลิงก์ไม่ถูกต้อง: ไม่พบ code หรือ token_hash')
-      } catch (e: any) {
-        setMsg(e?.message || 'ไม่สามารถยืนยันตัวตนได้')
+        // Supabase JS v2 จะ handle เองผ่าน listener → แค่รอสักครู่แล้วเปลี่ยนหน้า
+        setTimeout(() => {
+          const state = (loc.state as any) || {}
+          const to = state.from || '/dashboard'
+          nav(to, { replace: true })
+        }, 400)
+      } catch {
+        nav('/login', { replace: true })
       }
     }
     run()
-  }, [nav])
+  }, [nav, loc.state])
 
   return (
-    <div className="min-h-screen grid place-items-center bg-[#0b1220] text-white">
-      <p className="text-sm opacity-80">{msg}</p>
+    <div className="px-6 py-10 text-center text-sm text-[color:var(--ink-dim)]">
+      กำลังตรวจสอบสิทธิ์…
     </div>
   )
 }

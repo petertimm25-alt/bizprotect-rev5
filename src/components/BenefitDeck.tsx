@@ -43,7 +43,7 @@ export default function BenefitDeck() {
                 "inset 0 1px 0 rgba(255,255,255,.06), 0 8px 28px rgba(0,0,0,.25)",
             }}
           >
-            <h3 className="text-xl font-semibold text-gold-2">
+            <h3 className="text-xl font-semibold text-[color:var(--gold-2)]">
               {card.title}
             </h3>
             <ul className="mt-3 space-y-2 text-white/90 leading-relaxed">

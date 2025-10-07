@@ -4,7 +4,7 @@ import HeaderNav from '../components/HeaderNav'
 
 export default function AppShell() {
   return (
-    <div className="min-h-screen bg-[color:var(--page)] text-[color:var(--ink)]">
+    <div className="min-h-screen app-bg">
       <HeaderNav />
       <Outlet />
     </div>
