@@ -64,7 +64,7 @@ export default function DirectorsSection({
   return (
     <section id="directors-sec" className="space-y-4">
       {/* ฟิลด์ “แบบประกันฯ แนะนำ” — กำหนดครั้งเดียว ใช้กับทุกกรรมการ */}
-      <Card title="แบบประกันฯ แนะนำ (ใช้กับทุกกรรมการ)">
+      <Card title="แบบประกันฯ แนะนำ (ใช้กับผู้บริหารทุกคน)">
         <div className="grid md:grid-cols-3 gap-3">
           <input
             className="w-full rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10 outline-none focus:ring-gold/60"
@@ -145,7 +145,7 @@ export default function DirectorsSection({
                 <div className="text-l">
                   <span className="text-[#EBDCA6] font-medium">{d.name || `ผู้บริหาร ${idx + 1}`}</span>
                 </div>
-                <div className="text-xs text-[color:var(--ink-dim)]">คลิกเพื่อดู/ซ่อน</div>
+                <div className="text-xs text-[color:var(--ink-dim)] hover:text-gold">คลิกเพื่อดู/ซ่อน</div>
               </summary>
 
               {/* ฟอร์มกรอก */}

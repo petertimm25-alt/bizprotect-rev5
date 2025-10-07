@@ -9,7 +9,7 @@ export default function ReturnSection({ directors }: { directors: any[] }) {
   if (directors.length === 0) return null
   return (
     <section id="return-sec">
-      <Card title="ภาพรวมทุน & เบี้ย (ทุกกรรมการ) • สมมุติผลตอบแทนจากการลงทุนที่ 5%">
+      <Card title="ภาพรวมทุน & เบี้ย (ผู้บริหารทุกท่าน) • สมมุติผลตอบแทนจากการลงทุนที่ 5%">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm table">
             <thead className="text-[color:var(--ink-dim)]">
@@ -46,7 +46,7 @@ export default function ReturnSection({ directors }: { directors: any[] }) {
           </table>
         </div>
         <div className="text-xs text-[color:var(--ink-dim)] mt-4">
-          * ตัวอย่างที่แสดงคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จากแอป AZD
+          * ตัวอย่างที่แสดงคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จากแอปพลิเคชั่นของบริษัทประกันฯ ตามแบบประกันฯที่แนะนำ
         </div>
       </Card>
     </section>

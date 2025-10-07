@@ -89,17 +89,17 @@ export default function StickySummary({
         {/* สรุปตัวเลข */}
         <div className="w-full grid grid-cols-2 md:grid-cols-2 gap-3 mt-3">
           <div className="rounded-lg bg-white/5 p-3">
-            <div className="text-sm font-semibold text-[color:var(--ink-dim)]">ภาษีลดลง (หลังฯ)</div>
-            <div className="text-sm font-semibold text-right text-gold">
+            <div className="text-m font-semibold text-gold-2">ภาษีลดลง (หลังเข้าร่วมโครงการฯ)</div>
+            <div className="text-m font-semibold text-right text-gold">
               {fmt2(taxSaved_afterPremGross)}{' '}
-              <span className="text-sm text-white/80">
+              <span className="text-l text-white/80">
                 ({(taxSavedPct_afterPremGross || 0).toFixed(2)}%)
               </span>
             </div>
           </div>
           <div className="rounded-lg bg-white/5 p-3">
-            <div className="text-sm font-semibold text-[color:var(--ink-dim)]">บันทึกเป็นค่าใช้จ่าย(เบี้ย+ภาษีออกแทน)</div>
-            <div className="text-sm font-semibold text-right text-gold">{fmt2(combinedCost)}</div>
+            <div className="text-m font-semibold text-gold-2">บันทึกเป็นค่าใช้จ่าย(เบี้ย+ภาษีออกแทน)</div>
+            <div className="text-l font-semibold text-right text-gold">{fmt2(combinedCost)}</div>
           </div>
         </div>
       </div>
