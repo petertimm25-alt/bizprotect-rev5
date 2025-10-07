@@ -22,6 +22,7 @@ export default function Pricing() {
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="text-2xl font-semibold text-gold mb-6">เลือกแผน</h1>
+      <h2 className="text-xl font-semibold text-[#EBDCA6] mb-6">จ่ายหลักร้อยเพื่อปิดเบี้ยหลักล้าน</h2>
 
       <div role="radiogroup" aria-label="เลือกแผนการใช้งาน" className="grid md:grid-cols-3 gap-6">
         {/* Free */}
@@ -34,10 +35,10 @@ export default function Pricing() {
           className={[baseCard, focusGold, selected === 'free' ? activeRing : normalRing].join(' ')}
         >
           <div className="text-lg font-semibold">Free</div>
-          <div className="text-3xl font-bold mt-1">
+          <div className="text-3xl font-bold mt-1 text-gold">
             ฿0<span className="text-base font-normal"> /1 ที่นั่ง/ 1 อุปกรณ์ /เดือน</span>
           </div>
-          <div className="mt-1 text-xs text-[color:var(--ink-dim)]">โควตา Export: 3 ครั้ง/เดือน (มีวอเตอร์มาร์ก)</div>
+          <div className="mt-1 text-xs text-[color:var(--ink-dim)]">โควตา Export: 3 ครั้ง/เดือน (มีลายน้ำ)</div>
           <ul className="mt-4 space-y-2 text-sm">
             <Bullet>ผู้บริหารสูงสุด 1 คน</Bullet>
             <Bullet>คำนวณ CIT/PIT และภาษีออกแทนทุกทอด</Bullet>
@@ -61,11 +62,11 @@ export default function Pricing() {
           onKeyDown={(e) => (e.key === ' ' || e.key === 'Enter') && setSelected('pro')}
           className={[baseCard, focusGold, selected === 'pro' ? activeRing : normalRing, "relative"].join(' ')}
         >
-          <div className="absolute -top-3 right-4 text-[10px] px-2 py-1 rounded bg-gold/20 text-gold ring-1 ring-gold/40">
+          <div className="absolute -top-3 right-4 text-[16px] rounded-xl px-4 py-2 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95">
             แนะนำ
           </div>
           <div className="text-lg font-semibold">Pro</div>
-          <div className="text-3xl font-bold mt-1">
+          <div className="text-3xl font-bold mt-1 text-gold">
             ฿590<span className="text-base font-normal"> /1 ที่นั่ง/ 1 อุปกรณ์ /เดือน</span>
           </div>
           <div className="mt-1 text-xs text-[color:var(--ink-dim)]">โควตา Export: 30 ครั้ง/เดือน (ไม่มีลายน้ำ)</div>
@@ -93,7 +94,7 @@ export default function Pricing() {
           className={[baseCard, focusGold, selected === 'ultra' ? activeRing : normalRing].join(' ')}
         >
           <div className="text-lg font-semibold">Ultra</div>
-          <div className="text-3xl font-bold mt-1">
+          <div className="text-3xl font-bold mt-1 text-gold">
             ฿990<span className="text-base font-normal"> /1 ที่นั่ง/ 1 อุปกรณ์ /เดือน</span>
           </div>
           <div className="mt-1 text-xs text-[color:var(--ink-dim)]">Export ไม่จำกัด (ไม่มีลายน้ำ)</div>

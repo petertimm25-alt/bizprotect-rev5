@@ -369,7 +369,7 @@ function ProposalPDF({
           <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (งบจริง))</Text><Text style={styles.value}>{fmt(v.pbt_before)}</Text></View>
           <View style={styles.row}><Text style={styles.label}>ภาษี (งบจริง)</Text><Text style={styles.value}>{fmt(v.trueTax_before)}</Text></View>
           <View style={styles.row}><Text style={[styles.label, { color: 'red' }]}>ค่าบวกกลับ (คาดคะเนจากงบจริง)</Text><Text style={[styles.value,{color: 'red'}]}>{fmt(v.disallow_base)}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (หลังเข้าร่วมโครงการฯ: เบี้ย + ภาษีออกแทน)</Text><Text style={[styles.value, styles.gold]}>{fmt(v.pbt_afterPremGross)}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (หลังเข้าร่วมโครงการฯ: เบี้ย + ภาษีออกแทน))</Text><Text style={[styles.value, styles.gold]}>{fmt(v.pbt_afterPremGross)}</Text></View>
           <View style={styles.row}><Text style={styles.label}>ภาษี (หลังเข้าร่วมโครงการฯ: เบี้ย + ภาษีออกแทน)</Text><Text style={[styles.value, styles.gold]}>{fmt(v.trueTax_afterPremGross)}</Text></View>
           <View style={styles.row}><Text style={[styles.label, {fontWeight: 700}]}>ภาษีลดลง (หลังเข้าร่วมโครงการฯ)</Text><Text style={[styles.value, styles.gold]}>{fmt(v.taxSaved_afterPremGross)} ({v.taxSavedPct_afterPremGross.toFixed(2)}%)</Text></View>
         </View>
@@ -531,13 +531,13 @@ function ProposalPDF({
           <Text style={styles.h2}>ข้อกำกับ / Compliance</Text>
           <Text style={styles.note}>
             ระบบนี้ใช้อัตราภาษีตามกฎหมาย: ภาษีเงินได้นิติบุคคล 20% และภาษีเงินได้บุคคลธรรมดาแบบก้าวหน้า 
-            โดยมีการปัดเศษเพื่อความเหมาะสมในการนำเสนอ
+            โดยมีการปัดเศษเพื่อความเหมาะสมในการนำเสนออ
           </Text>
           <Text style={styles.note}>
             การบันทึกค่าใช้จ่าย เช่น เบี้ยประกันชีวิตกรรมการ และการออกภาษีแทน (gross-up) ต้องมีเอกสารประกอบครบถ้วนและเป็นไปตามหลักเกณฑ์ของกรมสรรพากร
           </Text>
           <Text style={styles.note}>
-            <Text style={{ fontWeight: 600 }}>ข้อจำกัดความรับผิด:</Text> ผลลัพธ์เป็นประมาณการเบื้องต้น ไม่ใช่คำแนะนำทางกฎหมาย/ภาษี ผู้ใช้งานควรปรึกษาผู้เชี่ยวชาญก่อนตัดสินใจ
+            <Text style={{ fontWeight: 600 }}>ข้อจำกัดความรับผิด:</Text> ผลลัพธ์เป็นประมาณการเบื้องต้น ไม่ใช่คำแนะนำทางกฎหมาย/ภาษี ผู้ใช้งานควรปรึกษาผู้เชี่ยวชาญก่อนตัดสินใจใจ
           </Text>
         </View>
 
@@ -622,7 +622,7 @@ export default function ExportPDF({ state }: { state: AppState }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-white/20 px-4 py-2 hover:bg-white/10"
+        className="rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95"
         title="ดูตัวอย่างแล้วดาวน์โหลด"
       >
         Export PDF

@@ -1,4 +1,4 @@
-// src/pages/UnifiedDashboard.tsx
+// src/pages/Dashboard.tsx
 import React from 'react'
 import Card from '../components/Card'
 import NumberInput from '../components/NumberInput'
@@ -206,8 +206,8 @@ export default function UnifiedDashboard() {
     <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
       {/* ===== Header ===== */}
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold text-gold">
-          โปรแกรมจำลอง ผลประโยชน์ทางภาษีนิติบุคคล และผลกระทบทางภาษีต่อบุคคลธรรมดา<br/>จากโครงการกรมธรรม์ฯนิติบุคคล (Corporate Policy Project Scenario)
+        <h2 className="text-3xl font-semibold text-[#EBDCA6]">
+          Keyman Corporate Policy Calculator
         </h2>
         {canExport ? (
             <ExportPDF state={data} />
@@ -244,11 +244,12 @@ export default function UnifiedDashboard() {
           </label>
 
           <div className="ml-auto flex items-center gap-2">
-            <a href="#company-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปข้อมูลบริษัท</a>
-            <a href="#directors-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปผู้บริหาร</a>
-            <a href="#cit-table-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปตาราง ภ.ง.ด.50</a>
-            <a href="#return-sec" className="text-xs px-3 py-1 rounded ring-1 ring-gold/40 hover:bg-gold/10">ไปผลตอบแทน</a>
-          </div>
+  <a href="#company-sec"   className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปข้อมูลบริษัท</a>
+  <a href="#directors-sec" className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปผู้บริหาร</a>
+  <a href="#cit-table-sec" className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปตาราง ภ.ง.ด.50</a>
+  <a href="#return-sec"    className="bp-btn bp-btn--sm bp-btn--ghost hover:text-gold-2">ไปผลตอบแทน</a>
+</div>
+
 
           
           <div className="w-full grid grid-cols-2 md:grid-cols-2 gap-3 mt-3">
@@ -316,7 +317,7 @@ export default function UnifiedDashboard() {
         <Card title="ข้อมูลบริษัท">
           <div className="mb-3 flex items-center">
             <div className="text-sm text-[color:var(--ink-dim)]">กรอกข้อมูลตั้งต้นของบริษัท</div>
-            <button onClick={handleClearCompany} className="ml-auto text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10">ล้างข้อมูล</button>
+            <button onClick={handleClearCompany} className="ml-auto text-xs bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold">ล้างข้อมูล</button>
           </div>
 
           <div className="w-full grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
@@ -366,7 +367,7 @@ export default function UnifiedDashboard() {
           <div className="flex items-center justify-end gap-2">
             <button
               onClick={() => setData(s => ({ ...s, company: { ...s.company, directors: s.company.directors.slice(0, -1) } }))}
-              className="px-3 py-1 rounded border border-gold/40 hover:text-gold disabled:opacity-40"
+              className="bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold"
               disabled={ds.length === 0}
               title={ds.length === 0 ? 'ไม่มีรายการให้ลบ' : 'ลบผู้บริหารคนสุดท้าย'}
             >
@@ -383,7 +384,7 @@ export default function UnifiedDashboard() {
                   ]
                 }
               }))}
-              className="px-3 py-1 rounded border border-gold/40 hover:text-gold disabled:opacity-40"
+              className="bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold-2"
               disabled={ds.length >= limit}
               title={ds.length < limit ? 'เพิ่มผู้บริหาร' : `ครบสูงสุด ${limit} คนแล้ว`}
             >
@@ -425,11 +426,11 @@ export default function UnifiedDashboard() {
             const netY3 = base - pit3 + g3
 
             return (
-              <details key={d.id} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4" open={idx === 0}>
+              <Card>
+              <details key={d.id} open={idx === 0}>
                 <summary className="flex items-center justify-between cursor-pointer select-none">
                   <div className="text-sm">
-                    <span className="text-[color:var(--ink-dim)]">กรรมการ:</span>{' '}
-                    <span className="text-[color:var(--ink)] font-medium">{d.name || `ผู้บริหาร ${idx + 1}`}</span>
+                    <span className="text-[#EBDCA6] font-medium">{d.name || `ผู้บริหาร ${idx + 1}`}</span>
                   </div>
                   <div className="text-xs text-[color:var(--ink-dim)]">คลิกเพื่อดู/ซ่อน</div>
                 </summary>
@@ -545,7 +546,7 @@ export default function UnifiedDashboard() {
                   {/* แบบประกัน (static) */}
                   <div className="md:col-span-2">
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">แบบประกันฯ แนะนำ</div>
-                    <div className="rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10 text-gold">
+                    <div className="rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10 text-[#EBDCA6] text-bold">
                       {productName} / ชำระเบี้ย {payYears} ปี / คุ้มครองถึงอายุ 99 ปี
                     </div>
                   </div>
@@ -582,28 +583,36 @@ export default function UnifiedDashboard() {
                     <NumberInput value={surrY7} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderY7: v ?? undefined } : x) }
-                    }))} />
+                    }))} 
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                   <div>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">มูลค่ารับซื้อคืน เมื่ออายุ 60 ปี</div>
                     <NumberInput value={surrAge60} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderAge60: v ?? undefined } : x) }
-                    }))} />
+                    }))} 
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                   <div>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">มูลค่ารับซื้อคืน เมื่ออายุ 70 ปี</div>
                     <NumberInput value={surrAge70} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderAge70: v ?? undefined } : x) }
-                    }))} />
+                    }))}
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                   <div>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">มูลค่ารับซื้อคืน เมื่ออายุ 99 ปี</div>
                     <NumberInput value={surrAge99} onChange={(v) => setData(s => ({
                       ...s,
                       company: { ...s.company, directors: s.company.directors.map(x => x.id === d.id ? { ...x, surrenderAge99: v ?? undefined } : x) }
-                    }))} />
+                    }))}
+                    placeholder="กรอกข้อมูลจาก AZD"
+                    />
                   </div>
                 </div>
 
@@ -612,6 +621,7 @@ export default function UnifiedDashboard() {
                   พรีวิว ภ.ง.ด.91: เงินสุทธิ/ปี ก่อนฯ {fmt2(netY1)} • หลังฯมีเบี้ย {fmt2(netY2)} • หลังฯมีเบี้ย+ภาษีแทน {fmt2(netY3)}
                 </div>
               </details>
+              </Card>
             )
           })}
         </section>
@@ -620,7 +630,7 @@ export default function UnifiedDashboard() {
       {/* ===== CIT Table ===== */}
       <section id="cit-table-sec" className="mt-4">
         <h3 className="text-lg font-semibold text-gold mb-3">
-          ภ.ง.ด.50 ของบริษัทจำกัด (โครงสร้างใหม่ — สื่อผลลดภาษี)
+          ภ.ง.ด.50 ของนิติบุคคล
         </h3>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm table">
@@ -736,7 +746,7 @@ export default function UnifiedDashboard() {
       {/* ===== PIT table for directors ===== */}
       {!emptyState && (
         <section className="mt-6">
-          <h3 className="text-lg font-semibold text-gold mb-3">ภ.ง.ด.91 สำหรับกรรมการ (ทุกคน)</h3>
+          <h3 className="text-lg font-semibold text-gold mb-3">ภ.ง.ด.91 สำหรับผู้บริหารรายบุคคล</h3>
           <div className="space-y-4">
             {ds.map((it, idx) => {
               const base = it.annualSalary ?? 0
@@ -753,11 +763,10 @@ export default function UnifiedDashboard() {
               const netY3 = base - pit3 + g3
 
               return (
-                <details key={it.id} className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3" open={idx === 0}>
+                <details key={it.id} className="rounded-xl bg-gradient-to-b from-[#142440]/80 to-[#0B1529]/80 ring-1 ring-[#D4AF37]/20 p-3" open={idx === 0}>
                   <summary className="flex items-center justify-between cursor-pointer select-none">
                     <div className="text-sm">
-                      <span className="text-[color:var(--ink-dim)]">ผู้บริหาร:</span>{' '}
-                      <span className="text-[color:var(--ink)] font-medium">{it.name || `ผู้บริหาร ${idx + 1}`}</span>
+                      <span className="text-[#EBDCA6] font-medium">{it.name || `ผู้บริหาร ${idx + 1}`}</span>
                     </div>
                     <div className="text-xs text-[color:var(--ink-dim)]">คลิกเพื่อดู/ซ่อนรายละเอียด</div>
                   </summary>
