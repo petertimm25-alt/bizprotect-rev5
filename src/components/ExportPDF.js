@@ -231,6 +231,9 @@ export default function ExportPDF({ state }) {
     const [busy, setBusy] = React.useState(false);
     const { user } = useAuth();
     const plan = (user?.plan ?? 'free');
+    // ถ้าแผนไม่มีสิทธิ์ export ให้ไม่เรนเดอร์ปุ่มเลย (กันพลาด)
+    if (!hasFeature(plan, 'export_pdf'))
+        return null;
     const downloadNow = async () => {
         if (!user) {
             toast('กรุณาเข้าสู่ระบบเพื่อดาวน์โหลดเอกสาร');
