@@ -15,7 +15,7 @@ const readPlanOverride = () => {
     const v = localStorage.getItem('bp:plan');
     return v === 'free' || v === 'pro' || v === 'ultra' ? v : null;
 };
-// แปลง Supabase.User -> UserLite (คงพฤติกรรมเดิมไว้)
+// แปลง Supabase.User -> UserLite
 function mapUser(u) {
     if (!u)
         return null;
@@ -43,12 +43,12 @@ export function AuthProvider({ children }) {
             return override;
         if (profilePlan)
             return profilePlan;
-        return (user?.plan ?? 'free');
+        return user?.plan ?? 'free';
     }, [user?.plan, profilePlan]);
-    // รวมสิทธิ์จาก roles.ts (ไม่ต้องมี getEntitlement ใน roles)
+    // รวมสิทธิ์จาก roles.ts
     const ent = React.useMemo(() => ({
         directorsMax: getDirectorLimit(plan),
-        pdfMonthlyQuota: getPdfMonthlyQuota(plan),
+        pdfMonthlyQuota: getPdfMonthlyQuota(plan), // <- ตรง type แล้ว
         export_pdf: hasFeature(plan, 'export_pdf'),
         no_watermark: hasFeature(plan, 'no_watermark'),
         agent_identity_on_pdf: hasFeature(plan, 'agent_identity_on_pdf'),
@@ -58,7 +58,6 @@ export function AuthProvider({ children }) {
         priority_support: hasFeature(plan, 'priority_support'),
     }), [plan]);
     React.useEffect(() => {
-        // ใช้ any เพื่อหลีกเลี่ยง TS แง่ type ของ onAuthStateChange ในกรณี supabase เป็น null
         let sub;
         async function boot() {
             if (!supabase) {
@@ -69,14 +68,14 @@ export function AuthProvider({ children }) {
             setUser(mapUser(session?.user ?? null));
             setLoading(false);
             if (session?.user) {
-                void fetchProfilePlan(session.user.id).then((p) => { if (p)
+                void fetchProfilePlan(session.user.id).then(p => { if (p)
                     setProfilePlan(p); });
             }
             sub = supabase.auth.onAuthStateChange((_evt, sess) => {
                 setUser(mapUser(sess?.user ?? null));
                 setProfilePlan(null);
                 if (sess?.user) {
-                    void fetchProfilePlan(sess.user.id).then((p) => { if (p)
+                    void fetchProfilePlan(sess.user.id).then(p => { if (p)
                         setProfilePlan(p); });
                 }
             });

@@ -1,88 +1,74 @@
 // src/lib/roles.ts
 export type Plan = 'free' | 'pro' | 'ultra'
 
-export type Feature =
-  | 'export_pdf'            // ปุ่ม Export (ให้ Free ด้วย แต่มีโควต้าและลายน้ำ)
-  | 'no_watermark'          // ไม่มีลายน้ำใน PDF
-  | 'agent_identity_on_pdf' // แสดงข้อมูลผู้เสนอในเอกสาร
-  | 'knowledge_full'        // เข้าถึง "ข้อหารือกรมสรรพากร" เต็ม
-  | 'proposal_builder'      // Proposal Builder (หน้าเฉพาะ Ultra)
-  | 'custom_branding'       // ใส่โลโก้ลูกค้า/ถอดโลโก้ระบบ (Ultra)
-  | 'autosave'
+export type FeatureKey =
+  | 'export_pdf'
+  | 'no_watermark'
+  | 'agent_identity_on_pdf'
+  | 'knowledge_full'
+  | 'custom_branding'
+  | 'proposal_builder'
   | 'priority_support'
-  | 'director_limit_1'
-  | 'director_limit_3'
-  | 'director_limit_10'
 
-export const PLAN_FEATURES: Record<Plan, Feature[]> = {
-  // Free: ใช้ Export ได้ 3 ครั้ง/เดือน และมีลายน้ำ
-  free: [
-    'export_pdf',
-    'autosave',
-    'director_limit_1',
-    // ไม่มี 'no_watermark'
-    // ไม่มี agent identity/knowledge/proposal
-  ],
-
-  // Pro: ไม่มีลายน้ำ, โควตา 30 ครั้ง/เดือน, เพิ่มข้อมูลผู้เสนอในเอกสาร
-  pro: [
-    'export_pdf',
-    'no_watermark',
-    'agent_identity_on_pdf',
-    'knowledge_full',
-    'autosave',
-    'director_limit_3',
-  ],
-
-  // Ultra: ไม่จำกัด, ไม่มีลายน้ำ, feature เต็ม
-  ultra: [
-    'export_pdf',
-    'no_watermark',
-    'agent_identity_on_pdf',
-    'knowledge_full',
-    'autosave',
-    'custom_branding',
-    'proposal_builder',
-    'priority_support',
-    'director_limit_10',
-  ],
+// ===== Feature matrix =====
+// Free: พื้นฐาน (ห้าม Export, ไม่มี knowledge)
+// Pro : ขายหลัก — Export ไม่จำกัด + ลบวอเตอร์มาร์ก + ใส่ผู้เสนอ + priority
+//       *** ปิด knowledge (ตามคำสั่ง) ***
+// Ultra: ครบทุกอย่าง รวม Custom Branding / Proposal Builder / Knowledge
+const FEATURE_MATRIX: Record<Plan, Record<FeatureKey, boolean>> = {
+  free: {
+    export_pdf: false,
+    no_watermark: false,
+    agent_identity_on_pdf: false,
+    knowledge_full: false,
+    custom_branding: false,
+    proposal_builder: false,
+    priority_support: false,
+  },
+  pro: {
+    export_pdf: true,
+    no_watermark: true,
+    agent_identity_on_pdf: true,
+    knowledge_full: false, // <<< ปิดการเข้าถึง Knowledge สำหรับ Pro
+    custom_branding: false,
+    proposal_builder: false,
+    priority_support: true,
+  },
+  ultra: {
+    export_pdf: true,
+    no_watermark: true,
+    agent_identity_on_pdf: true,
+    knowledge_full: true,
+    custom_branding: true,
+    proposal_builder: true,
+    priority_support: true,
+  },
 }
 
-export function hasFeature(plan: Plan, feature: Feature) {
-  return PLAN_FEATURES[plan]?.includes(feature) ?? false
+export function hasFeature(plan: Plan, key: FeatureKey): boolean {
+  return !!FEATURE_MATRIX[plan]?.[key]
 }
 
-export function isUltra(plan?: Plan | null): boolean {
-  return plan === 'ultra'
-}
-
-export function isProOrUltra(plan?: Plan | null): boolean {
-  return plan === 'pro' || plan === 'ultra'
-}
-
-// จำกัดจำนวนผู้บริหารตามแผน
-export function getDirectorLimit(plan?: Plan | null): number {
-  if (!plan) return 1
-  if (hasFeature(plan, 'director_limit_10')) return 10
-  if (hasFeature(plan, 'director_limit_3')) return 3
-  return 1
-}
-
-// โควต้า Export PDF ต่อเดือน (ตามสรุปล่าสุด)
-// - Free: 3 ครั้ง/เดือน (มีลายน้ำ)
-// - Pro: 30 ครั้ง/เดือน (ไม่มีลายน้ำ)
-// - Ultra: ไม่จำกัด (ไม่มีลายน้ำ)
-export type PdfMonthlyQuota = number | 'unlimited'
-
-export function getPdfMonthlyQuota(plan: Plan): PdfMonthlyQuota {
+// ===== เพดานจำนวนกรรมการ =====
+export function getDirectorLimit(plan: Plan): number {
   switch (plan) {
-    case 'free':
-      return 3
-    case 'pro':
-      return 30
-    case 'ultra':
-      return 'unlimited'
-    default:
-      return 0
+    case 'free':  return 1
+    case 'pro':   return 5
+    case 'ultra': return 10
   }
 }
+
+// ===== โควตา Export PDF ต่อเดือน =====
+// Free = 0 (กดไม่ได้), Pro/Ultra = ไม่จำกัด
+export type PdfQuota = number | 'unlimited'
+export function getPdfMonthlyQuota(plan: Plan): PdfQuota {
+  switch (plan) {
+    case 'free':  return 0
+    case 'pro':
+    case 'ultra': return 'unlimited'
+  }
+}
+
+// ===== helpers =====
+export const isPro   = (p?: Plan) => p === 'pro' || p === 'ultra'
+export const isUltra = (p?: Plan) => p === 'ultra'

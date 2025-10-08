@@ -1,3 +1,4 @@
+// src/App.tsx
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
@@ -11,9 +12,15 @@ import Dashboard from './pages/Dashboard'     // ถ้าคุณใช้ Uni
 import Knowledge from './pages/Knowledge'
 import PrivateRoute from './routes/PrivateRoute'
 
+// เพิ่ม: FAB ปรับขนาดตัวอักษร (แสดงเฉพาะ Pro/Ultra)
+import FontScalerFab from './components/FontScalerFab'
+
 export default function App() {
   return (
     <AuthProvider>
+      {/* FAB เป็น fixed component แสดงทุกหน้า */}
+      <FontScalerFab />
+
       <Routes>
         {/* กลุ่มหน้าที่มี Header */}
         <Route element={<AppShell />}>

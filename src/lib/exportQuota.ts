@@ -1,76 +1,49 @@
 // src/lib/exportQuota.ts
-import { Plan, getPdfMonthlyQuota } from './roles'
+// Utility ฝั่ง client (localStorage) — ใช้เป็น fallback/ทดสอบเท่านั้น
+// ระบบจริงใช้ serverQuota.ts เป็นตัวเช็ค/หักโควต้าหลัก
 
-/** เก็บ usage ต่อผู้ใช้แบบรายเดือน */
-type UsageState = {
-  monthKey: string // e.g. "2025-09"
-  used: number
+import { type Plan, getPdfMonthlyQuota } from './roles'
+
+// key = userId + YYYYMM
+function keyFor(userId: string) {
+  const d = new Date()
+  const ym = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`
+  return `bp:pdf_cnt:${userId}:${ym}`
 }
 
-const KEY = (userId: string) => `bp:pdfquota:${userId}`
-
-function getMonthKey(d = new Date()): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
-}
-
-function readState(userId: string): UsageState {
+// อ่านจำนวนที่ใช้ไปในเดือนนี้ (ฝั่ง client)
+function readUsed(userId: string): number {
   try {
-    const raw = localStorage.getItem(KEY(userId))
-    if (!raw) return { monthKey: getMonthKey(), used: 0 }
-    const parsed = JSON.parse(raw) as UsageState
-    // reset เมื่อเข้าเดือนใหม่
-    if (parsed.monthKey !== getMonthKey()) {
-      return { monthKey: getMonthKey(), used: 0 }
-    }
-    // ป้องกันข้อมูลพัง
-    if (typeof parsed.used !== 'number' || parsed.used < 0) {
-      return { monthKey: getMonthKey(), used: 0 }
-    }
-    return parsed
+    const v = localStorage.getItem(keyFor(userId))
+    const n = v ? parseInt(v, 10) : 0
+    return Number.isFinite(n) ? n : 0
   } catch {
-    return { monthKey: getMonthKey(), used: 0 }
+    return 0
   }
 }
 
-function writeState(userId: string, st: UsageState) {
+// บันทึกจำนวนที่ใช้ไป (ฝั่ง client)
+function writeUsed(userId: string, n: number) {
   try {
-    localStorage.setItem(KEY(userId), JSON.stringify(st))
-  } catch {
-    // เงียบไว้ (quota เป็น best-effort)
-  }
+    localStorage.setItem(keyFor(userId), String(Math.max(0, n)))
+  } catch {}
 }
 
-/** เหลือโควต้าเท่าไร (null = ไม่จำกัด) */
-export function getRemaining(userId: string, plan: Plan): number | null {
+// ===== Public API (client utility) =====
+
+// คืนค่าจำนวนคงเหลือแบบคำนวณฝั่ง client
+// - null = ไม่จำกัด
+export function getRemainingLocal(userId: string, plan: Plan): number | null {
   const quota = getPdfMonthlyQuota(plan) // number | 'unlimited'
   if (quota === 'unlimited') return null
-
-  const st = readState(userId)
-  const remaining = Math.max(0, quota - st.used)
-  return remaining
+  const used = readUsed(userId)
+  return Math.max(0, quota - used)
 }
 
-/** เช็คสิทธิ์ก่อนดาวน์โหลดทันที */
-export function canExportNow(
-  userId: string,
-  plan: Plan
-): { ok: boolean; remaining: number | null } {
-  const quota = getPdfMonthlyQuota(plan)
-  if (quota === 'unlimited') {
-    return { ok: true, remaining: null }
-  }
-  const st = readState(userId)
-  const remaining = Math.max(0, quota - st.used)
-  return { ok: remaining > 0, remaining }
-}
-
-/** บันทึกการใช้ 1 ครั้ง (ข้ามถ้าแผนไม่จำกัด) */
-export function noteExport(userId: string, plan: Plan): void {
+// บวก 1 การใช้งาน (client)
+export function noteExportLocal(userId: string, plan: Plan) {
   const quota = getPdfMonthlyQuota(plan)
   if (quota === 'unlimited') return
-  const st = readState(userId)
-  const next: UsageState = { monthKey: getMonthKey(), used: st.used + 1 }
-  writeState(userId, next)
+  const used = readUsed(userId)
+  writeUsed(userId, Math.min(quota, used + 1))
 }

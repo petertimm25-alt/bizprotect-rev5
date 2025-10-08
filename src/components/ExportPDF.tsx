@@ -1,4 +1,3 @@
-// src/components/ExportPDF.tsx
 import React from 'react'
 import type { AppState } from '../lib/types'
 import {
@@ -8,17 +7,15 @@ import { pitTax, marginalRate, progressiveGrossUp } from '../lib/tax'
 import { RULINGS } from '../data/rulings'
 import { useAuth } from '../lib/auth'
 import { hasFeature } from '../lib/roles'
-import { canExportNow, noteExport, getRemaining } from '../lib/exportQuota'
 import { toast } from '../lib/toast'
+import { canExportServer } from '../lib/serverQuota' // รองรับ peek และหักจริง
 
-/* -------------------- Safe asset resolver (กันพาธเพี้ยน) -------------------- */
+/* -------------------- Safe asset resolver -------------------- */
 function getBaseUrl(): string {
-  // ใช้ค่าจาก Vite ถ้ามี
   try {
     const b = (import.meta as any)?.env?.BASE_URL ?? (import.meta as any)?.env?.BASE
     if (typeof b === 'string' && b.length) return b.endsWith('/') ? b : b + '/'
   } catch {}
-  // ลองอ่าน <base href="...">
   try {
     const href = document.querySelector('base')?.getAttribute('href') || '/'
     return href.endsWith('/') ? href : href + '/'
@@ -29,7 +26,6 @@ function asset(path: string) {
   const base = getBaseUrl()
   return base + path.replace(/^\//, '')
 }
-const BASE = getBaseUrl()
 
 /* -------------------- Assets / Fonts -------------------- */
 const F_REG  = asset('fonts/IBMPlexSansThaiLooped-Regular.ttf')
@@ -50,7 +46,7 @@ try {
   console.warn('PDF font register failed:', e)
 }
 
-/* -------------------- Theme: Ivory Gold -------------------- */
+/* -------------------- Theme -------------------- */
 const THEME = {
   pageBg: '#FFFBF0',
   ink: '#2A2A2A',
@@ -74,23 +70,18 @@ const styles = StyleSheet.create({
   },
   content: { marginTop: 20 },
   afterBreakTopGap: { marginTop: 28 },
-
   h1: { fontSize: 12, fontWeight: 700, marginBottom: 6, color: THEME.ink },
   h2: { fontSize: 10, fontWeight: 600, marginTop: 10, marginBottom: 4, color: THEME.ink },
   gold: { color: THEME.gold, fontWeight: 600 },
-
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
   label: { color: THEME.inkDim },
   value: {},
-
   card: { ...border, borderWidth: 1, borderRadius: 6, padding: 8, marginBottom: 8, backgroundColor: '#FFFFFF' },
-
   table: {
     marginTop: 4,
     ...border,
     borderLeftWidth: 1, borderRightWidth: 1, borderTopWidth: 1, borderBottomWidth: 1,
-    borderRadius: 6,
-    backgroundColor: '#FFFFFF',
+    borderRadius: 6, backgroundColor: '#FFFFFF',
   },
   tr: {
     flexDirection: 'row',
@@ -98,36 +89,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 0, borderLeftWidth: 0, borderRightWidth: 0, borderBottomWidth: 1,
   },
   noBottom: { borderBottomWidth: 0 },
-
   th: { flex: 1, padding: 4, fontWeight: 600, backgroundColor: THEME.tableHeaderBg, lineHeight: 1.25, color: THEME.ink },
   td: { flex: 1, padding: 4, lineHeight: 1.25, color: THEME.ink },
   right: { textAlign: 'right' },
-
   note: { fontSize: 9, color: THEME.inkDim, marginTop: 6, lineHeight: 1.3 },
-
-  pageNum: {
-    position: 'absolute', bottom: 12, left: 0, right: 0,
-    textAlign: 'center', color: THEME.inkDim, fontSize: 9,
-  },
-
+  pageNum: { position: 'absolute', bottom: 12, left: 0, right: 0, textAlign: 'center', color: THEME.inkDim, fontSize: 9 },
   wmBox: { position: 'absolute', top: '28%', left: 0, right: 0, alignItems: 'center', opacity: THEME.watermarkOpacity },
   wmImg: { width: 380, height: 380, objectFit: 'contain' },
-
   brand: { position: 'absolute', top: 10, right: 19, width: 40, objectFit: 'contain', opacity: 0.95 },
-
   presenterRow: { flexDirection: 'row', gap: 8 },
   presenterCol: { flex: 1 },
-
   presenterKV: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 2 },
   presenterLabel: { color: THEME.inkDim, minWidth: 90 },
   presenterValue: { flex: 1, textAlign: 'left' },
-
   planBox: { ...border, borderWidth: 1, borderRadius: 6, padding: 8, backgroundColor: '#FFFFFF', marginTop: 6, marginBottom: 6 },
   planTitle: { fontSize: 10, fontWeight: 600, color: THEME.ink, marginBottom: 2 },
   planText: { fontSize: 9, color: THEME.gold, fontWeight: 600 },
 })
 
-/* -------------------- Utils -------------------- */
+/* -------------------- Helpers -------------------- */
 const fmt = (n?: number) =>
   n === undefined || Number.isNaN(n)
     ? '-'
@@ -226,21 +206,15 @@ function PageWithBrand({
   children,
   showWatermark,
   brandLogo,
-}: {
-  children: React.ReactNode
-  showWatermark: boolean
-  brandLogo?: string
-}) {
+}: { children: React.ReactNode; showWatermark: boolean; brandLogo?: string }) {
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.content}>{children}</View>
-
       {showWatermark && (
         <View style={styles.wmBox} fixed>
           <Image src={BP_LOGO} style={styles.wmImg} />
         </View>
       )}
-
       <Text style={styles.pageNum} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
       {brandLogo ? <Image src={brandLogo} style={styles.brand} fixed /> : null}
     </Page>
@@ -252,15 +226,6 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
   const v = buildComputed(state)
   const showWatermark = plan === 'free'
   const brandLogo = plan === 'ultra' && v.presenter?.logoDataUrl ? (v.presenter.logoDataUrl as string) : undefined
-
-  const productName = 'My Style Legacy Ultra (Unit Linked)'
-  const payYears = 7
-  const coverageAge = 99
-
-  const ROWS_FIRST_PAGE_A = 10
-  const ROWS_NEXT_PAGE_A  = 18
-  const ROWS_FIRST_PAGE_B = 6
-  const ROWS_NEXT_PAGE_B  = 18
 
   const directorRows = v.gus.map(g => ({
     key: g.id,
@@ -375,7 +340,7 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
 
       {/* PAGE 2+ */}
       <PageWithBrand showWatermark={showWatermark} brandLogo={brandLogo}>
-        {/* ตารางผู้บริหาร — แตกหลายหน้า พร้อมหัวตารางซ้ำ */}
+        {/* ตารางผู้บริหาร (ผลกระทบภาษีรายบุคคล) */}
         <Text style={styles.h2}>ตารางผู้บริหาร (ผลกระทบภาษีรายบุคคล)</Text>
         {chunkRows(directorRows, 10, 18).map((rows, pageIdx) => (
           <View key={`dir-page-${pageIdx}`} style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table} break={pageIdx > 0}>
@@ -388,7 +353,7 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
           </View>
         ))}
 
-        {/* ทุนประกันฯ & เบี้ย — แตกหลายหน้า พร้อมหัวตารางซ้ำ */}
+        {/* ทุนประกันฯ & เบี้ย */}
         <View style={{ marginTop: 10 }}>
           <Text style={styles.h2}>ทุนประกันฯ & เบี้ย ของผู้บริหารรายบุคคล • สมมุติผลตอบแทนจากการลงทุนที่ 5%</Text>
 
@@ -409,33 +374,6 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
           ))}
 
           <Text style={styles.note}>* ตัวอย่างที่แสดงข้างต้นคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จาก แอปพลิเคชั่น AZD</Text>
-        </View>
-
-        {/* อ้างอิงข้อหารือ */}
-        <View style={[styles.card, { marginTop: 15 }]} wrap={false}>
-          <Text style={styles.h2}>ข้อหารือสรรพากรที่เกี่ยวข้อง</Text>
-          {RULINGS.slice(0, 2).map((r, i) => (
-            <View key={r.docNo} style={{ marginBottom: 3 }}>
-              <Text style={{ fontWeight: 600 }}>{i + 1}. <Link src={r.url}>{r.docNo}</Link></Text>
-              <Text>เรื่อง: {r.topic}</Text>
-              <Text style={{ color: THEME.inkDim, fontSize: 9 }}>แนววินิจฉัย: {r.summary}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Compliance */}
-        <View style={styles.card} wrap={false}>
-          <Text style={styles.h2}>ข้อกำกับ / Compliance</Text>
-          <Text style={styles.note}>
-            ระบบนี้ใช้อัตราภาษีตามกฎหมาย: ภาษีเงินได้นิติบุคคล 20% และภาษีเงินได้บุคคลธรรมดาแบบก้าวหน้า 
-            โดยมีการปัดเศษเพื่อความเหมาะสมในการนำเสนออ
-          </Text>
-          <Text style={styles.note}>
-            การบันทึกค่าใช้จ่าย เช่น เบี้ยประกันชีวิตกรรมการ และการออกภาษีแทน (gross-up) ต้องมีเอกสารประกอบครบถ้วนและเป็นไปตามหลักเกณฑ์ของกรมสรรพากร
-          </Text>
-          <Text style={styles.note}>
-            <Text style={{ fontWeight: 600 }}>ข้อจำกัดความรับผิด:</Text> ผลลัพธ์เป็นประมาณการเบื้องต้น ไม่ใช่คำแนะนำทางกฎหมาย/ภาษี ผู้ใช้งานควรปรึกษาผู้เชี่ยวชาญก่อนตัดสินใจใจ
-          </Text>
         </View>
 
         {/* ผู้เสนอ — Pro/Ultra เท่านั้น */}
@@ -460,37 +398,75 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
   )
 }
 
-/* -------------------- UI: ปุ่ม + พรีวิว -------------------- */
+/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด -------------------- */
 export default function ExportPDF({ state }: { state: AppState }) {
   const [open, setOpen] = React.useState(false)
+  const [busy, setBusy] = React.useState(false)
+  const [remain, setRemain] = React.useState<number | null | undefined>(undefined)
   const { user } = useAuth()
   const plan = (user?.plan ?? 'free') as 'free' | 'pro' | 'ultra'
-  const userId = user?.id ?? 'guest'
-  const remaining = getRemaining(userId, plan)
+
+  // แสดงยอดคงเหลือแบบ peek: pro/ultra -> server ควรส่ง remaining = null (ไม่จำกัด)
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      if (!user) { setRemain(undefined); return }
+      const peek = await canExportServer({ peek: true })
+      if (mounted) setRemain(peek.ok ? (peek.remaining ?? null) : undefined)
+    })()
+    return () => { mounted = false }
+  }, [user?.id])
 
   const downloadNow = async () => {
     if (!user) {
       toast('กรุณาเข้าสู่ระบบเพื่อดาวน์โหลดเอกสาร')
       return
     }
-    const { ok, remaining } = canExportNow(user.id, plan)
-    if (!ok) {
-      toast('ถึงโควตา Export ประจำเดือนแล้ว • อัปเกรดแผนหรือรอเดือนถัดไป')
-      ;(window.location as any).href = '/pricing'
+    if (busy) return
+    setBusy(true)
+
+    // ตรวจ + (ถ้าจำกัด) หักที่ฝั่ง server ก่อนทุกครั้ง
+    const res = await canExportServer()
+    if (!res.ok) {
+      setBusy(false)
+      if (res.reason === 'unauthorized') {
+        toast('กรุณาเข้าสู่ระบบก่อน')
+      } else if (res.reason === 'quota_exceeded') {
+        toast('โควต้า Export ประจำเดือนเต็มแล้ว • อัปเกรดแผนหรือรอเดือนถัดไป')
+        ;(window.location as any).href = '/pricing'
+      } else {
+        toast(`ไม่สามารถตรวจโควตาได้ (${res.reason ?? 'error'})`)
+        console.error('can_export:', res)
+      }
       return
     }
 
-    const blob = await pdf(<ProposalPDF state={state} plan={plan} />).toBlob()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'BizProtect-Proposal.pdf'
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const blob = await pdf(<ProposalPDF state={state} plan={plan} />).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'BizProtect-Proposal.pdf'
+      a.click()
+      URL.revokeObjectURL(url)
 
-    noteExport(user.id, plan)
-    toast(remaining === null ? 'ดาวน์โหลดแล้ว (ไม่จำกัดโควตา)' : `ดาวน์โหลดแล้ว • เหลือ ${Math.max(0, (remaining ?? 0) - 1)} ครั้งในเดือนนี้`)
+      // อัปเดต badge: pro/ultra => null (ไม่จำกัด) • free ใช้ไม่ได้อยู่แล้ว
+      setRemain(res.remaining ?? null)
+      toast(res.remaining == null ? 'ดาวน์โหลดแล้ว (ไม่จำกัดโควตา)' : `ดาวน์โหลดแล้ว • เหลือ ${res.remaining} ครั้งในเดือนนี้`)
+    } catch (e) {
+      console.error('export failed:', e)
+      toast('สร้างไฟล์ไม่สำเร็จ กรุณาลองใหม่')
+    } finally {
+      setBusy(false)
+    }
   }
+
+  const quotaBadge =
+    remain == null
+      ? <span className="ml-2 text-xs text-gold/80">(ไม่จำกัด)</span>
+      : typeof remain === 'number'
+        ? <span className="ml-2 text-xs text-gold/80">(เหลือ {remain} ครั้ง/เดือน)</span>
+        : <span className="ml-2 text-xs text-gold/50">(กำลังตรวจสอบ…)</span>
 
   return (
     <>
@@ -499,12 +475,7 @@ export default function ExportPDF({ state }: { state: AppState }) {
         className="rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95"
         title="ดูตัวอย่างแล้วดาวน์โหลด"
       >
-        Export PDF
-        {remaining === null ? (
-          <span className="ml-1 text-xs text-gold/80">(ไม่จำกัด)</span>
-        ) : (
-          <span className="ml-1 text-xs text-gold/80">({remaining} ครั้ง/เดือน)</span>
-        )}
+        Export PDF {quotaBadge}
       </button>
 
       {open && (
@@ -513,7 +484,13 @@ export default function ExportPDF({ state }: { state: AppState }) {
             <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
               <div className="text-sm text-[color:var(--ink-dim)]">ตัวอย่างเอกสาร (Preview)</div>
               <div className="flex items-center gap-2">
-                <button onClick={downloadNow} className="text-xs px-3 py-1 rounded ring-1 ring-gold/50 hover:bg-gold/10">ดาวน์โหลด</button>
+                <button
+                  onClick={downloadNow}
+                  disabled={busy}
+                  className="text-xs px-3 py-1 rounded ring-1 ring-gold/50 hover:bg-gold/10 disabled:opacity-50"
+                >
+                  {busy ? 'กำลังสร้าง…' : 'ดาวน์โหลด'}
+                </button>
                 <button onClick={() => setOpen(false)} className="text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10">ปิด</button>
               </div>
             </div>

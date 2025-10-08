@@ -1,13 +1,11 @@
-// src/pages/Dashboard.tsx
 import React from 'react'
 import ExportPDF from '../components/ExportPDF'
 import { load, save } from '../lib/storage'
 import { initialState } from '../lib/state'
 import type { AppState } from '../lib/types'
 import { useDebounceEffect } from '../lib/useDebounceEffect'
-import { marginalRate, pitTax, progressiveGrossUp } from '../lib/tax' // (บางอันใช้ในลูก ๆ)
+import { progressiveGrossUp } from '../lib/tax'
 import { useAuth } from '../lib/auth'
-import { canExportServer } from '../lib/serverQuota'
 
 import StickySummary from './dashboard/StickySummary'
 import CompanySection from './dashboard/CompanySection'
@@ -23,42 +21,10 @@ export default function Dashboard() {
 
   // ===== Entitlements (จาก useAuth) =====
   const { user, ent } = useAuth()
-  const canExport = !!user && ent.export_pdf
+  const canExport = !!user && ent.export_pdf            // free = false, pro/ultra = true
   const limit = ent.directorsMax
   const canEditPresenter = ent.agent_identity_on_pdf
   const canUploadLogo = ent.custom_branding
-
-  // state สำหรับอนุญาตให้แสดงปุ่ม Export จริงหลังเช็คผ่าน
-  const [exportAllowedOnce, setExportAllowedOnce] = React.useState(false)
-  const [exportBusy, setExportBusy] = React.useState(false)
-
-  const onExportClick = async () => {
-    if (!canExport) {
-      window.location.href = '/pricing'
-      return
-    }
-    setExportBusy(true)
-    const res = await canExportServer()
-    setExportBusy(false)
-
-    if (!res.ok) {
-      if (res.reason === 'unauthorized') {
-        alert('กรุณาเข้าสู่ระบบก่อน')
-      } else if (res.reason === 'quota_exceeded') {
-        alert('โควต้า Export ของเดือนนี้เต็มแล้ว — อัปเกรดแผนเพื่อเพิ่มโควตา')
-      } else {
-        alert(`ไม่สามารถตรวจโควตาได้ (${res.reason ?? 'error'})`)
-        console.error('can_export:', res)
-      }
-      return
-    }
-
-    // ผ่านโควต้าแล้ว -> แสดง ExportPDF ให้ผู้ใช้กดปุ่มของคอมโพเนนต์ได้ทันที
-    setExportAllowedOnce(true)
-    setTimeout(() => {
-      alert(`พร้อมส่งออกแล้ว (โควต้าเหลือ ${res.remaining ?? 'ไม่จำกัด'}) — กดปุ่ม Export ได้เลย`)
-    }, 0)
-  }
 
   // Trim directors if exceeds plan limit
   React.useEffect(() => {
@@ -210,33 +176,17 @@ export default function Dashboard() {
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">Keyman Corporate Policy Calculator</h2>
 
         {canExport ? (
-          <button
-            onClick={onExportClick}
-            disabled={exportBusy}
-            className="inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10 disabled:opacity-50"
-          >
-            {exportBusy ? 'Checking…' : 'Export PDF'}
-          </button>
+          <ExportPDF state={data} />
         ) : (
           <button
             onClick={() => (window.location.href = '/pricing')}
             className="inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10"
-            title="อัปเกรดเป็น Pro เพื่อใช้งาน Export PDF"
+            title="อัปเกรดเป็น Pro เพื่อใช้งาน Export PDF (ไม่จำกัด)"
           >
             Upgrade to Export PDF
           </button>
         )}
       </div>
-
-      {/* เมื่ออนุมัติแล้วจึงแสดงคอมโพเนนต์ ExportPDF ให้กดส่งออก */}
-      {exportAllowedOnce && (
-        <div className="rounded border border-emerald-500/40 p-3 text-sm text-emerald-300">
-          โควต้าอนุมัติแล้ว — กดปุ่ม Export ของคอมโพเนนต์ด้านล่างได้เลย
-        </div>
-      )}
-      {exportAllowedOnce && (
-        <ExportPDF state={data} />
-      )}
 
       {/* ===== Sticky Summary ===== */}
       <StickySummary

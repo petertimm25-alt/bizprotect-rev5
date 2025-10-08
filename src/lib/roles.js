@@ -1,62 +1,55 @@
-export const PLAN_FEATURES = {
-    // Free: ใช้ Export ได้ 3 ครั้ง/เดือน และมีลายน้ำ
-    free: [
-        'export_pdf',
-        'autosave',
-        'director_limit_1',
-        // ไม่มี 'no_watermark'
-        // ไม่มี agent identity/knowledge/proposal
-    ],
-    // Pro: ไม่มีลายน้ำ, โควตา 30 ครั้ง/เดือน, เพิ่มข้อมูลผู้เสนอในเอกสาร
-    pro: [
-        'export_pdf',
-        'no_watermark',
-        'agent_identity_on_pdf',
-        'knowledge_full',
-        'autosave',
-        'director_limit_3',
-    ],
-    // Ultra: ไม่จำกัด, ไม่มีลายน้ำ, feature เต็ม
-    ultra: [
-        'export_pdf',
-        'no_watermark',
-        'agent_identity_on_pdf',
-        'knowledge_full',
-        'autosave',
-        'custom_branding',
-        'proposal_builder',
-        'priority_support',
-        'director_limit_10',
-    ],
+// ===== Feature matrix =====
+// Free: พื้นฐาน (ห้าม Export, ไม่มี knowledge)
+// Pro : ขายหลัก — Export ไม่จำกัด + ลบวอเตอร์มาร์ก + ใส่ผู้เสนอ + priority
+//       *** ปิด knowledge (ตามคำสั่ง) ***
+// Ultra: ครบทุกอย่าง รวม Custom Branding / Proposal Builder / Knowledge
+const FEATURE_MATRIX = {
+    free: {
+        export_pdf: false,
+        no_watermark: false,
+        agent_identity_on_pdf: false,
+        knowledge_full: false,
+        custom_branding: false,
+        proposal_builder: false,
+        priority_support: false,
+    },
+    pro: {
+        export_pdf: true,
+        no_watermark: true,
+        agent_identity_on_pdf: true,
+        knowledge_full: false, // <<< ปิดการเข้าถึง Knowledge สำหรับ Pro
+        custom_branding: false,
+        proposal_builder: false,
+        priority_support: true,
+    },
+    ultra: {
+        export_pdf: true,
+        no_watermark: true,
+        agent_identity_on_pdf: true,
+        knowledge_full: true,
+        custom_branding: true,
+        proposal_builder: true,
+        priority_support: true,
+    },
 };
-export function hasFeature(plan, feature) {
-    return PLAN_FEATURES[plan]?.includes(feature) ?? false;
+export function hasFeature(plan, key) {
+    return !!FEATURE_MATRIX[plan]?.[key];
 }
-export function isUltra(plan) {
-    return plan === 'ultra';
-}
-export function isProOrUltra(plan) {
-    return plan === 'pro' || plan === 'ultra';
-}
-// จำกัดจำนวนผู้บริหารตามแผน
+// ===== เพดานจำนวนกรรมการ =====
 export function getDirectorLimit(plan) {
-    if (!plan)
-        return 1;
-    if (hasFeature(plan, 'director_limit_10'))
-        return 10;
-    if (hasFeature(plan, 'director_limit_3'))
-        return 3;
-    return 1;
+    switch (plan) {
+        case 'free': return 1;
+        case 'pro': return 5;
+        case 'ultra': return 10;
+    }
 }
 export function getPdfMonthlyQuota(plan) {
     switch (plan) {
-        case 'free':
-            return 3;
+        case 'free': return 0;
         case 'pro':
-            return 30;
-        case 'ultra':
-            return 'unlimited';
-        default:
-            return 0;
+        case 'ultra': return 'unlimited';
     }
 }
+// ===== helpers =====
+export const isPro = (p) => p === 'pro' || p === 'ultra';
+export const isUltra = (p) => p === 'ultra';

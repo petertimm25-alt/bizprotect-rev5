@@ -9,6 +9,8 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard'; // ถ้าคุณใช้ UnifiedDashboard เปลี่ยน import ตรงนี้
 import Knowledge from './pages/Knowledge';
 import PrivateRoute from './routes/PrivateRoute';
+// เพิ่ม: FAB ปรับขนาดตัวอักษร (แสดงเฉพาะ Pro/Ultra)
+import FontScalerFab from './components/FontScalerFab';
 export default function App() {
-    return (_jsx(AuthProvider, { children: _jsxs(Routes, { children: [_jsxs(Route, { element: _jsx(AppShell, {}), children: [_jsx(Route, { path: "/", element: _jsx(Landing, {}) }), _jsx(Route, { path: "/pricing", element: _jsx(Pricing, {}) }), _jsxs(Route, { element: _jsx(PrivateRoute, {}), children: [_jsx(Route, { path: "/dashboard", element: _jsx(Dashboard, {}) }), _jsx(Route, { path: "/knowledge", element: _jsx(Knowledge, {}) })] })] }), _jsx(Route, { path: "/login", element: _jsx(Login, {}) }), _jsx(Route, { path: "/auth/callback", element: _jsx(AuthCallback, {}) }), _jsx(Route, { path: "*", element: _jsx(Navigate, { to: "/", replace: true }) })] }) }));
+    return (_jsxs(AuthProvider, { children: [_jsx(FontScalerFab, {}), _jsxs(Routes, { children: [_jsxs(Route, { element: _jsx(AppShell, {}), children: [_jsx(Route, { path: "/", element: _jsx(Landing, {}) }), _jsx(Route, { path: "/pricing", element: _jsx(Pricing, {}) }), _jsxs(Route, { element: _jsx(PrivateRoute, {}), children: [_jsx(Route, { path: "/dashboard", element: _jsx(Dashboard, {}) }), _jsx(Route, { path: "/knowledge", element: _jsx(Knowledge, {}) })] })] }), _jsx(Route, { path: "/login", element: _jsx(Login, {}) }), _jsx(Route, { path: "/auth/callback", element: _jsx(AuthCallback, {}) }), _jsx(Route, { path: "*", element: _jsx(Navigate, { to: "/", replace: true }) })] })] }));
 }
