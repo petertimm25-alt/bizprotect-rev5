@@ -1,7 +1,14 @@
 import React from 'react'
 import { useAuth } from '../lib/auth'
 
-/** ชื่อคีย์ต้องตรงกับ ent ใน useAuth() */
+/**
+ * ชื่อคีย์ต้องตรงกับ ent ใน useAuth():
+ *  - ent.knowledge_full
+ *  - ent.export_pdf
+ *  - ent.agent_identity_on_pdf
+ *  - ent.custom_branding
+ * และควรมี ent.directorsMax (number) แยกต่างหาก
+ */
 type FeatureKey =
   | 'knowledge_full'
   | 'export_pdf'
@@ -15,8 +22,22 @@ export default function RequireFeature({
   feature: FeatureKey
   children: React.ReactNode
 }) {
-  const { user, ent } = useAuth()
-  const ok = !!user && !!ent?.[feature]
+  const { user, ent, plan } = useAuth() as any
+
+  // ป้องกันกรณีโปรเจ็กต์เก่า ent ยังไม่มี:
+  // ถ้าไม่มี ent ให้เดาจาก plan ชั่วคราว (free/pro/ultra)
+  const fallbackEnt = React.useMemo(() => {
+    const p = (plan ?? 'free') as 'free' | 'pro' | 'ultra'
+    return {
+      export_pdf: p !== 'free',
+      knowledge_full: p !== 'free',
+      agent_identity_on_pdf: p !== 'free',
+      custom_branding: p === 'ultra',
+    }
+  }, [plan])
+
+  const e = ent ?? fallbackEnt
+  const ok = !!user && !!e?.[feature]
 
   if (ok) return <>{children}</>
 
@@ -24,7 +45,7 @@ export default function RequireFeature({
     <div className="mx-auto max-w-3xl rounded-xl border border-white/10 bg-white/[0.03] p-6 text-sm">
       <div className="text-[#EBDCA6] font-medium mb-1">ต้องอัปเกรดแพ็กเกจ</div>
       <div className="text-[color:var(--ink-dim)]">
-        ฟีเจอร์นี้สงวนสำหรับแผน <b>Pro</b> หรือ <b>Ultra</b> (สิทธิ์ <code>knowledge_full</code>)
+        ฟีเจอร์นี้สงวนสำหรับแผน <b>Pro</b> หรือ <b>Ultra</b> ({feature})
       </div>
       <div className="mt-4 flex gap-2">
         <button
