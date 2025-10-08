@@ -1,23 +1,19 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 // src/components/ExportPDF.tsx
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, Font, pdf, Link, BlobProvider, Image, } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font, pdf, BlobProvider, Image, } from '@react-pdf/renderer';
 import { pitTax, marginalRate, progressiveGrossUp } from '../lib/tax';
-import { RULINGS } from '../data/rulings';
 import { useAuth } from '../lib/auth';
 import { hasFeature } from '../lib/roles';
-import { canExportNow, noteExport, getRemaining } from '../lib/exportQuota';
 import { toast } from '../lib/toast';
-/* -------------------- Safe asset resolver (กันพาธเพี้ยน) -------------------- */
+/* -------------------- Safe asset resolver -------------------- */
 function getBaseUrl() {
-    // ใช้ค่าจาก Vite ถ้ามี
     try {
         const b = import.meta?.env?.BASE_URL ?? import.meta?.env?.BASE;
         if (typeof b === 'string' && b.length)
             return b.endsWith('/') ? b : b + '/';
     }
     catch { }
-    // ลองอ่าน <base href="...">
     try {
         const href = document.querySelector('base')?.getAttribute('href') || '/';
         return href.endsWith('/') ? href : href + '/';
@@ -29,7 +25,6 @@ function asset(path) {
     const base = getBaseUrl();
     return base + path.replace(/^\//, '');
 }
-const BASE = getBaseUrl();
 /* -------------------- Assets / Fonts -------------------- */
 const F_REG = asset('fonts/IBMPlexSansThaiLooped-Regular.ttf');
 const F_SEMI = asset('fonts/IBMPlexSansThaiLooped-SemiBold.ttf');
@@ -48,7 +43,7 @@ try {
 catch (e) {
     console.warn('PDF font register failed:', e);
 }
-/* -------------------- Theme: Ivory Gold -------------------- */
+/* -------------------- Theme -------------------- */
 const THEME = {
     pageBg: '#FFFBF0',
     ink: '#2A2A2A',
@@ -81,8 +76,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
         ...border,
         borderLeftWidth: 1, borderRightWidth: 1, borderTopWidth: 1, borderBottomWidth: 1,
-        borderRadius: 6,
-        backgroundColor: '#FFFFFF',
+        borderRadius: 6, backgroundColor: '#FFFFFF',
     },
     tr: {
         flexDirection: 'row',
@@ -110,7 +104,7 @@ const styles = StyleSheet.create({
     planTitle: { fontSize: 10, fontWeight: 600, color: THEME.ink, marginBottom: 2 },
     planText: { fontSize: 9, color: THEME.gold, fontWeight: 600 },
 });
-/* -------------------- Utils -------------------- */
+/* -------------------- Helpers -------------------- */
 const fmt = (n) => n === undefined || Number.isNaN(n)
     ? '-'
     : n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -200,13 +194,6 @@ function ProposalPDF({ state, plan }) {
     const v = buildComputed(state);
     const showWatermark = plan === 'free';
     const brandLogo = plan === 'ultra' && v.presenter?.logoDataUrl ? v.presenter.logoDataUrl : undefined;
-    const productName = 'My Style Legacy Ultra (Unit Linked)';
-    const payYears = 7;
-    const coverageAge = 99;
-    const ROWS_FIRST_PAGE_A = 10;
-    const ROWS_NEXT_PAGE_A = 18;
-    const ROWS_FIRST_PAGE_B = 6;
-    const ROWS_NEXT_PAGE_B = 18;
     const directorRows = v.gus.map(g => ({
         key: g.id,
         cells: [g.name || '-', fmt(g.base), fmt(g.pit1), fmt(g.pit3), fmt(g.g), fmt(g.net1), fmt(g.net3), fmt(g.sumAssured ?? 0)],
@@ -236,37 +223,44 @@ function ProposalPDF({ state, plan }) {
                                 ['รายจ่ายรวม/ดอกเบี้ยจ่าย (บาท/ปี)', -(v.expense + v.interest), -(v.expense + v.interest), -(v.expense + v.interest)],
                                 ['กำไรก่อนภาษี (บาท/ปี))', v.pbt_before, v.pbt_afterPrem, v.pbt_afterPremGross],
                                 ['ภาษีเงินได้ที่เสียจริง (บาท/ปี)', -v.trueTax_before, -v.trueTax_afterPrem, -v.trueTax_afterPremGross],
-                            ].map((r, i) => (_jsxs(View, { style: styles.tr, children: [_jsx(Text, { style: [styles.td, { flex: 2 }], children: r[0] }), _jsx(Text, { style: [styles.td, styles.right], children: fmt(r[1]) }), _jsx(Text, { style: [styles.td, styles.right], children: fmt(r[2]) }), _jsx(Text, { style: [styles.td, styles.right], children: fmt(r[3]) })] }, i))), _jsxs(View, { style: styles.tr, children: [_jsx(Text, { style: [styles.td, { flex: 2, fontWeight: 600, color: THEME.gold }], children: "\u0E20\u0E32\u0E29\u0E35\u0E17\u0E35\u0E48\u0E25\u0E14\u0E25\u0E07" }), _jsx(Text, { style: styles.td }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: fmt(v.taxSaved_afterPrem) }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: fmt(v.taxSaved_afterPremGross) })] }), _jsxs(View, { style: [styles.tr, styles.noBottom], children: [_jsx(Text, { style: [styles.td, { flex: 2, fontWeight: 600, color: THEME.gold }], children: "% \u0E17\u0E35\u0E48\u0E25\u0E14\u0E25\u0E07" }), _jsx(Text, { style: styles.td }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: v.trueTax_before > 0 ? `${v.taxSavedPct_afterPrem.toFixed(2)}%` : '-' }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: v.trueTax_before > 0 ? `${v.taxSavedPct_afterPremGross.toFixed(2)}%` : '-' })] })] })] }), _jsxs(PageWithBrand, { showWatermark: showWatermark, brandLogo: brandLogo, children: [_jsx(Text, { style: styles.h2, children: "\u0E15\u0E32\u0E23\u0E32\u0E07\u0E1C\u0E39\u0E49\u0E1A\u0E23\u0E34\u0E2B\u0E32\u0E23 (\u0E1C\u0E25\u0E01\u0E23\u0E30\u0E17\u0E1A\u0E20\u0E32\u0E29\u0E35\u0E23\u0E32\u0E22\u0E1A\u0E38\u0E04\u0E04\u0E25)" }), chunkRows(directorRows, 10, 18).map((rows, pageIdx) => (_jsxs(View, { style: pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table, break: pageIdx > 0, children: [_jsx(HeaderRow, { headers: ['ผู้บริหาร', 'เงินได้ ม.40(1)', 'PIT ก่อนฯ', 'PIT หลังฯ', 'ภาษีออกแทน', 'เงินสุทธิ ก่อนฯ', 'เงินสุทธิ หลังฯ', 'มีทุนประกันชีวิต'] }), rows.length === 0 ? (_jsx(View, { style: [styles.tr, styles.noBottom], children: _jsx(Text, { style: [styles.td, { flex: 8, textAlign: 'center', color: THEME.inkDim }], children: "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1C\u0E39\u0E49\u0E1A\u0E23\u0E34\u0E2B\u0E32\u0E23" }) })) : (_jsx(BodyRows, { rows: rows }))] }, `dir-page-${pageIdx}`))), _jsxs(View, { style: { marginTop: 10 }, children: [_jsx(Text, { style: styles.h2, children: "\u0E17\u0E38\u0E19\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19\u0E2F & \u0E40\u0E1A\u0E35\u0E49\u0E22 \u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E1A\u0E23\u0E34\u0E2B\u0E32\u0E23\u0E23\u0E32\u0E22\u0E1A\u0E38\u0E04\u0E04\u0E25 \u2022 \u0E2A\u0E21\u0E21\u0E38\u0E15\u0E34\u0E1C\u0E25\u0E15\u0E2D\u0E1A\u0E41\u0E17\u0E19\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E25\u0E07\u0E17\u0E38\u0E19\u0E17\u0E35\u0E48 5%" }), _jsxs(View, { style: styles.planBox, children: [_jsx(Text, { style: styles.planTitle, children: "\u0E41\u0E1A\u0E1A\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19\u0E2F \u0E41\u0E19\u0E30\u0E19\u0E33 " }), _jsx(Text, { style: styles.planText, children: "My Style Legacy Ultra (Unit Linked)" }), _jsx(Text, { style: styles.planText, children: "\u0E0A\u0E33\u0E23\u0E30\u0E40\u0E1A\u0E35\u0E49\u0E22 7 \u0E1B\u0E35" }), _jsx(Text, { style: styles.planText, children: "\u0E04\u0E38\u0E49\u0E21\u0E04\u0E23\u0E2D\u0E07\u0E16\u0E36\u0E07\u0E2D\u0E32\u0E22\u0E38 99 \u0E1B\u0E35" })] }), _jsx(Text, { style: styles.note, children: "** \u0E21\u0E39\u0E25\u0E04\u0E48\u0E32\u0E23\u0E31\u0E1A\u0E0B\u0E37\u0E49\u0E2D\u0E04\u0E37\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E25\u0E07\u0E17\u0E38\u0E19\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E15\u0E48\u0E32\u0E07\u0E46" }), chunkRows(fundRows, fundRows.length >= 7 ? 6 : 6, 18).map((rows, pageIdx) => (_jsxs(View, { style: pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table, break: pageIdx > 0, wrap: false, children: [_jsx(HeaderRow, { headers: ['ผู้บริหาร', 'ทุนประกันชีวิต', 'เบี้ย/ปี', 'เบี้ยสะสม ปีที่ 7', '**กรมฯ ปีที่ 7', '**อายุ 60 ปี', '**อายุ 70 ปี', '**อายุ 99 ปี'] }), _jsx(BodyRows, { rows: rows })] }, `fund-page-${pageIdx}`))), _jsx(Text, { style: styles.note, children: "* \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E02\u0E49\u0E32\u0E07\u0E15\u0E49\u0E19\u0E04\u0E33\u0E19\u0E27\u0E13\u0E08\u0E32\u0E01\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E1C\u0E25\u0E15\u0E2D\u0E1A\u0E41\u0E17\u0E19\u0E2A\u0E21\u0E21\u0E15\u0E34\u0E42\u0E14\u0E22\u0E40\u0E09\u0E25\u0E35\u0E48\u0E22\u0E15\u0E48\u0E2D\u0E1B\u0E35 5% \u0E08\u0E32\u0E01 \u0E41\u0E2D\u0E1B\u0E1E\u0E25\u0E34\u0E40\u0E04\u0E0A\u0E31\u0E48\u0E19 AZD" })] }), _jsxs(View, { style: [styles.card, { marginTop: 15 }], wrap: false, children: [_jsx(Text, { style: styles.h2, children: "\u0E02\u0E49\u0E2D\u0E2B\u0E32\u0E23\u0E37\u0E2D\u0E2A\u0E23\u0E23\u0E1E\u0E32\u0E01\u0E23\u0E17\u0E35\u0E48\u0E40\u0E01\u0E35\u0E48\u0E22\u0E27\u0E02\u0E49\u0E2D\u0E07" }), RULINGS.slice(0, 2).map((r, i) => (_jsxs(View, { style: { marginBottom: 3 }, children: [_jsxs(Text, { style: { fontWeight: 600 }, children: [i + 1, ". ", _jsx(Link, { src: r.url, children: r.docNo })] }), _jsxs(Text, { children: ["\u0E40\u0E23\u0E37\u0E48\u0E2D\u0E07: ", r.topic] }), _jsxs(Text, { style: { color: THEME.inkDim, fontSize: 9 }, children: ["\u0E41\u0E19\u0E27\u0E27\u0E34\u0E19\u0E34\u0E08\u0E09\u0E31\u0E22: ", r.summary] })] }, r.docNo)))] }), _jsxs(View, { style: styles.card, wrap: false, children: [_jsx(Text, { style: styles.h2, children: "\u0E02\u0E49\u0E2D\u0E01\u0E33\u0E01\u0E31\u0E1A / Compliance" }), _jsx(Text, { style: styles.note, children: "\u0E23\u0E30\u0E1A\u0E1A\u0E19\u0E35\u0E49\u0E43\u0E0A\u0E49\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E20\u0E32\u0E29\u0E35\u0E15\u0E32\u0E21\u0E01\u0E0E\u0E2B\u0E21\u0E32\u0E22: \u0E20\u0E32\u0E29\u0E35\u0E40\u0E07\u0E34\u0E19\u0E44\u0E14\u0E49\u0E19\u0E34\u0E15\u0E34\u0E1A\u0E38\u0E04\u0E04\u0E25 20% \u0E41\u0E25\u0E30\u0E20\u0E32\u0E29\u0E35\u0E40\u0E07\u0E34\u0E19\u0E44\u0E14\u0E49\u0E1A\u0E38\u0E04\u0E04\u0E25\u0E18\u0E23\u0E23\u0E21\u0E14\u0E32\u0E41\u0E1A\u0E1A\u0E01\u0E49\u0E32\u0E27\u0E2B\u0E19\u0E49\u0E32 \u0E42\u0E14\u0E22\u0E21\u0E35\u0E01\u0E32\u0E23\u0E1B\u0E31\u0E14\u0E40\u0E28\u0E29\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E04\u0E27\u0E32\u0E21\u0E40\u0E2B\u0E21\u0E32\u0E30\u0E2A\u0E21\u0E43\u0E19\u0E01\u0E32\u0E23\u0E19\u0E33\u0E40\u0E2A\u0E19\u0E2D\u0E2D" }), _jsx(Text, { style: styles.note, children: "\u0E01\u0E32\u0E23\u0E1A\u0E31\u0E19\u0E17\u0E36\u0E01\u0E04\u0E48\u0E32\u0E43\u0E0A\u0E49\u0E08\u0E48\u0E32\u0E22 \u0E40\u0E0A\u0E48\u0E19 \u0E40\u0E1A\u0E35\u0E49\u0E22\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19\u0E0A\u0E35\u0E27\u0E34\u0E15\u0E01\u0E23\u0E23\u0E21\u0E01\u0E32\u0E23 \u0E41\u0E25\u0E30\u0E01\u0E32\u0E23\u0E2D\u0E2D\u0E01\u0E20\u0E32\u0E29\u0E35\u0E41\u0E17\u0E19 (gross-up) \u0E15\u0E49\u0E2D\u0E07\u0E21\u0E35\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23\u0E1B\u0E23\u0E30\u0E01\u0E2D\u0E1A\u0E04\u0E23\u0E1A\u0E16\u0E49\u0E27\u0E19\u0E41\u0E25\u0E30\u0E40\u0E1B\u0E47\u0E19\u0E44\u0E1B\u0E15\u0E32\u0E21\u0E2B\u0E25\u0E31\u0E01\u0E40\u0E01\u0E13\u0E11\u0E4C\u0E02\u0E2D\u0E07\u0E01\u0E23\u0E21\u0E2A\u0E23\u0E23\u0E1E\u0E32\u0E01\u0E23" }), _jsxs(Text, { style: styles.note, children: [_jsx(Text, { style: { fontWeight: 600 }, children: "\u0E02\u0E49\u0E2D\u0E08\u0E33\u0E01\u0E31\u0E14\u0E04\u0E27\u0E32\u0E21\u0E23\u0E31\u0E1A\u0E1C\u0E34\u0E14:" }), " \u0E1C\u0E25\u0E25\u0E31\u0E1E\u0E18\u0E4C\u0E40\u0E1B\u0E47\u0E19\u0E1B\u0E23\u0E30\u0E21\u0E32\u0E13\u0E01\u0E32\u0E23\u0E40\u0E1A\u0E37\u0E49\u0E2D\u0E07\u0E15\u0E49\u0E19 \u0E44\u0E21\u0E48\u0E43\u0E0A\u0E48\u0E04\u0E33\u0E41\u0E19\u0E30\u0E19\u0E33\u0E17\u0E32\u0E07\u0E01\u0E0E\u0E2B\u0E21\u0E32\u0E22/\u0E20\u0E32\u0E29\u0E35 \u0E1C\u0E39\u0E49\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19\u0E04\u0E27\u0E23\u0E1B\u0E23\u0E36\u0E01\u0E29\u0E32\u0E1C\u0E39\u0E49\u0E40\u0E0A\u0E35\u0E48\u0E22\u0E27\u0E0A\u0E32\u0E0D\u0E01\u0E48\u0E2D\u0E19\u0E15\u0E31\u0E14\u0E2A\u0E34\u0E19\u0E43\u0E08\u0E43\u0E08"] })] }), hasFeature(plan, 'agent_identity_on_pdf') && (_jsxs(View, { style: [styles.card, styles.afterBreakTopGap], wrap: false, break: true, children: [_jsx(Text, { style: styles.h2, children: "\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E19\u0E2D" }), _jsxs(View, { style: styles.presenterRow, children: [_jsxs(View, { style: styles.presenterCol, children: [_jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E19\u0E2D" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.name || '-' })] }), _jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.phone || '-' })] }), _jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E2D\u0E35\u0E40\u0E21\u0E25" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.email || '-' })] })] }), _jsxs(View, { style: styles.presenterCol, children: [_jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E1A\u0E23\u0E34\u0E29\u0E31\u0E17" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.company || '-' })] }), _jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E43\u0E1A\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.licenseNo || '-' })] })] })] })] }))] })] }));
+                            ].map((r, i) => (_jsxs(View, { style: styles.tr, children: [_jsx(Text, { style: [styles.td, { flex: 2 }], children: r[0] }), _jsx(Text, { style: [styles.td, styles.right], children: fmt(r[1]) }), _jsx(Text, { style: [styles.td, styles.right], children: fmt(r[2]) }), _jsx(Text, { style: [styles.td, styles.right], children: fmt(r[3]) })] }, i))), _jsxs(View, { style: styles.tr, children: [_jsx(Text, { style: [styles.td, { flex: 2, fontWeight: 600, color: THEME.gold }], children: "\u0E20\u0E32\u0E29\u0E35\u0E17\u0E35\u0E48\u0E25\u0E14\u0E25\u0E07" }), _jsx(Text, { style: styles.td }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: fmt(v.taxSaved_afterPrem) }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: fmt(v.taxSaved_afterPremGross) })] }), _jsxs(View, { style: [styles.tr, styles.noBottom], children: [_jsx(Text, { style: [styles.td, { flex: 2, fontWeight: 600, color: THEME.gold }], children: "% \u0E17\u0E35\u0E48\u0E25\u0E14\u0E25\u0E07" }), _jsx(Text, { style: styles.td }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: v.trueTax_before > 0 ? `${v.taxSavedPct_afterPrem.toFixed(2)}%` : '-' }), _jsx(Text, { style: [styles.td, styles.right, { color: THEME.gold, fontWeight: 600 }], children: v.trueTax_before > 0 ? `${v.taxSavedPct_afterPremGross.toFixed(2)}%` : '-' })] })] })] }), _jsxs(PageWithBrand, { showWatermark: showWatermark, brandLogo: brandLogo, children: [_jsx(Text, { style: styles.h2, children: "\u0E15\u0E32\u0E23\u0E32\u0E07\u0E1C\u0E39\u0E49\u0E1A\u0E23\u0E34\u0E2B\u0E32\u0E23 (\u0E1C\u0E25\u0E01\u0E23\u0E30\u0E17\u0E1A\u0E20\u0E32\u0E29\u0E35\u0E23\u0E32\u0E22\u0E1A\u0E38\u0E04\u0E04\u0E25)" }), chunkRows(directorRows, 10, 18).map((rows, pageIdx) => (_jsxs(View, { style: pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table, break: pageIdx > 0, children: [_jsx(HeaderRow, { headers: ['ผู้บริหาร', 'เงินได้ ม.40(1)', 'PIT ก่อนฯ', 'PIT หลังฯ', 'ภาษีออกแทน', 'เงินสุทธิ ก่อนฯ', 'เงินสุทธิ หลังฯ', 'มีทุนประกันชีวิต'] }), rows.length === 0 ? (_jsx(View, { style: [styles.tr, styles.noBottom], children: _jsx(Text, { style: [styles.td, { flex: 8, textAlign: 'center', color: THEME.inkDim }], children: "\u0E22\u0E31\u0E07\u0E44\u0E21\u0E48\u0E21\u0E35\u0E02\u0E49\u0E2D\u0E21\u0E39\u0E25\u0E1C\u0E39\u0E49\u0E1A\u0E23\u0E34\u0E2B\u0E32\u0E23" }) })) : (_jsx(BodyRows, { rows: rows }))] }, `dir-page-${pageIdx}`))), _jsxs(View, { style: { marginTop: 10 }, children: [_jsx(Text, { style: styles.h2, children: "\u0E17\u0E38\u0E19\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19\u0E2F & \u0E40\u0E1A\u0E35\u0E49\u0E22 \u0E02\u0E2D\u0E07\u0E1C\u0E39\u0E49\u0E1A\u0E23\u0E34\u0E2B\u0E32\u0E23\u0E23\u0E32\u0E22\u0E1A\u0E38\u0E04\u0E04\u0E25 \u2022 \u0E2A\u0E21\u0E21\u0E38\u0E15\u0E34\u0E1C\u0E25\u0E15\u0E2D\u0E1A\u0E41\u0E17\u0E19\u0E08\u0E32\u0E01\u0E01\u0E32\u0E23\u0E25\u0E07\u0E17\u0E38\u0E19\u0E17\u0E35\u0E48 5%" }), _jsxs(View, { style: styles.planBox, children: [_jsx(Text, { style: styles.planTitle, children: "\u0E41\u0E1A\u0E1A\u0E1B\u0E23\u0E30\u0E01\u0E31\u0E19\u0E2F \u0E41\u0E19\u0E30\u0E19\u0E33 " }), _jsx(Text, { style: styles.planText, children: "My Style Legacy Ultra (Unit Linked)" }), _jsx(Text, { style: styles.planText, children: "\u0E0A\u0E33\u0E23\u0E30\u0E40\u0E1A\u0E35\u0E49\u0E22 7 \u0E1B\u0E35" }), _jsx(Text, { style: styles.planText, children: "\u0E04\u0E38\u0E49\u0E21\u0E04\u0E23\u0E2D\u0E07\u0E16\u0E36\u0E07\u0E2D\u0E32\u0E22\u0E38 99 \u0E1B\u0E35" })] }), _jsx(Text, { style: styles.note, children: "** \u0E21\u0E39\u0E25\u0E04\u0E48\u0E32\u0E23\u0E31\u0E1A\u0E0B\u0E37\u0E49\u0E2D\u0E04\u0E37\u0E19\u0E2B\u0E19\u0E48\u0E27\u0E22\u0E25\u0E07\u0E17\u0E38\u0E19\u0E43\u0E19\u0E0A\u0E48\u0E27\u0E07\u0E40\u0E27\u0E25\u0E32\u0E15\u0E48\u0E32\u0E07\u0E46" }), chunkRows(fundRows, fundRows.length >= 7 ? 6 : 6, 18).map((rows, pageIdx) => (_jsxs(View, { style: pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table, break: pageIdx > 0, wrap: false, children: [_jsx(HeaderRow, { headers: ['ผู้บริหาร', 'ทุนประกันชีวิต', 'เบี้ย/ปี', 'เบี้ยสะสม ปีที่ 7', '**กรมฯ ปีที่ 7', '**อายุ 60 ปี', '**อายุ 70 ปี', '**อายุ 99 ปี'] }), _jsx(BodyRows, { rows: rows })] }, `fund-page-${pageIdx}`))), _jsx(Text, { style: styles.note, children: "* \u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E17\u0E35\u0E48\u0E41\u0E2A\u0E14\u0E07\u0E02\u0E49\u0E32\u0E07\u0E15\u0E49\u0E19\u0E04\u0E33\u0E19\u0E27\u0E13\u0E08\u0E32\u0E01\u0E2D\u0E31\u0E15\u0E23\u0E32\u0E1C\u0E25\u0E15\u0E2D\u0E1A\u0E41\u0E17\u0E19\u0E2A\u0E21\u0E21\u0E15\u0E34\u0E42\u0E14\u0E22\u0E40\u0E09\u0E25\u0E35\u0E48\u0E22\u0E15\u0E48\u0E2D\u0E1B\u0E35 5% \u0E08\u0E32\u0E01 \u0E41\u0E2D\u0E1B\u0E1E\u0E25\u0E34\u0E40\u0E04\u0E0A\u0E31\u0E48\u0E19 AZD" })] }), hasFeature(plan, 'agent_identity_on_pdf') && (_jsxs(View, { style: [styles.card, styles.afterBreakTopGap], wrap: false, break: true, children: [_jsx(Text, { style: styles.h2, children: "\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E19\u0E2D" }), _jsxs(View, { style: styles.presenterRow, children: [_jsxs(View, { style: styles.presenterCol, children: [_jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E0A\u0E37\u0E48\u0E2D\u0E1C\u0E39\u0E49\u0E40\u0E2A\u0E19\u0E2D" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.name || '-' })] }), _jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E40\u0E1A\u0E2D\u0E23\u0E4C\u0E42\u0E17\u0E23" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.phone || '-' })] }), _jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E2D\u0E35\u0E40\u0E21\u0E25" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.email || '-' })] })] }), _jsxs(View, { style: styles.presenterCol, children: [_jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E1A\u0E23\u0E34\u0E29\u0E31\u0E17" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.company || '-' })] }), _jsxs(View, { style: styles.presenterKV, children: [_jsx(Text, { style: styles.presenterLabel, children: "\u0E40\u0E25\u0E02\u0E17\u0E35\u0E48\u0E43\u0E1A\u0E2D\u0E19\u0E38\u0E0D\u0E32\u0E15" }), _jsx(Text, { style: styles.presenterValue, children: v.presenter?.licenseNo || '-' })] })] })] })] }))] })] }));
 }
-/* -------------------- UI: ปุ่ม + พรีวิว -------------------- */
+/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด (ไม่มีโควต้า) -------------------- */
 export default function ExportPDF({ state }) {
     const [open, setOpen] = React.useState(false);
+    const [busy, setBusy] = React.useState(false);
     const { user } = useAuth();
     const plan = (user?.plan ?? 'free');
-    const userId = user?.id ?? 'guest';
-    const remaining = getRemaining(userId, plan);
+    // ถ้าแผนไม่มีสิทธิ์ export ให้ไม่เรนเดอร์ปุ่มเลย (กันพลาด)
+    if (!hasFeature(plan, 'export_pdf'))
+        return null;
     const downloadNow = async () => {
         if (!user) {
             toast('กรุณาเข้าสู่ระบบเพื่อดาวน์โหลดเอกสาร');
             return;
         }
-        const { ok, remaining } = canExportNow(user.id, plan);
-        if (!ok) {
-            toast('ถึงโควตา Export ประจำเดือนแล้ว • อัปเกรดแผนหรือรอเดือนถัดไป');
-            window.location.href = '/pricing';
+        if (busy)
             return;
+        setBusy(true);
+        try {
+            const blob = await pdf(_jsx(ProposalPDF, { state: state, plan: plan })).toBlob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'BizProtect-Proposal.pdf';
+            a.click();
+            URL.revokeObjectURL(url);
+            toast('ดาวน์โหลดแล้ว');
         }
-        const blob = await pdf(_jsx(ProposalPDF, { state: state, plan: plan })).toBlob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'BizProtect-Proposal.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-        noteExport(user.id, plan);
-        toast(remaining === null ? 'ดาวน์โหลดแล้ว (ไม่จำกัดโควตา)' : `ดาวน์โหลดแล้ว • เหลือ ${Math.max(0, (remaining ?? 0) - 1)} ครั้งในเดือนนี้`);
+        catch (e) {
+            console.error('export failed:', e);
+            toast('สร้างไฟล์ไม่สำเร็จ กรุณาลองใหม่');
+        }
+        finally {
+            setBusy(false);
+        }
     };
-    return (_jsxs(_Fragment, { children: [_jsxs("button", { onClick: () => setOpen(true), className: "rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95", title: "\u0E14\u0E39\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E2B\u0E25\u0E14", children: ["Export PDF", remaining === null ? (_jsx("span", { className: "ml-1 text-xs text-gold/80", children: "(\u0E44\u0E21\u0E48\u0E08\u0E33\u0E01\u0E31\u0E14)" })) : (_jsxs("span", { className: "ml-1 text-xs text-gold/80", children: ["(", remaining, " \u0E04\u0E23\u0E31\u0E49\u0E07/\u0E40\u0E14\u0E37\u0E2D\u0E19)"] }))] }), open && (_jsx("div", { className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4", children: _jsxs("div", { className: "w-full max-w-5xl rounded-xl bg-[color:var(--page)] ring-1 ring-white/10 overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between px-4 py-2 border-b border-white/10", children: [_jsx("div", { className: "text-sm text-[color:var(--ink-dim)]", children: "\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 (Preview)" }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx("button", { onClick: downloadNow, className: "text-xs px-3 py-1 rounded ring-1 ring-gold/50 hover:bg-gold/10", children: "\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E2B\u0E25\u0E14" }), _jsx("button", { onClick: () => setOpen(false), className: "text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10", children: "\u0E1B\u0E34\u0E14" })] })] }), _jsx("div", { className: "h-[80vh] bg-black/10", children: _jsx(BlobProvider, { document: _jsx(ProposalPDF, { state: state, plan: plan }), children: ({ url, loading, error }) => {
+    return (_jsxs(_Fragment, { children: [_jsx("button", { onClick: () => setOpen(true), className: "rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95", title: "\u0E14\u0E39\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E41\u0E25\u0E49\u0E27\u0E14\u0E32\u0E27\u0E19\u0E4C\u0E42\u0E2B\u0E25\u0E14", children: "Export PDF" }), open && (_jsx("div", { className: "fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4", children: _jsxs("div", { className: "w-full max-w-5xl rounded-xl bg-[color:var(--page)] ring-1 ring-white/10 overflow-hidden", children: [_jsxs("div", { className: "flex items-center justify-between px-4 py-2 border-b border-white/10", children: [_jsx("div", { className: "text-sm text-[color:var(--ink-dim)]", children: "\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u0E40\u0E2D\u0E01\u0E2A\u0E32\u0E23 (Preview)" }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx("button", { onClick: downloadNow, disabled: busy, className: "text-xs px-3 py-1 rounded ring-1 ring-gold/50 hover:bg-gold/10 disabled:opacity-50", children: busy ? 'กำลังสร้าง…' : 'ดาวน์โหลด' }), _jsx("button", { onClick: () => setOpen(false), className: "text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10", children: "\u0E1B\u0E34\u0E14" })] })] }), _jsx("div", { className: "h-[80vh] bg-black/10", children: _jsx(BlobProvider, { document: _jsx(ProposalPDF, { state: state, plan: plan }), children: ({ url, loading, error }) => {
                                     if (loading)
                                         return _jsx("div", { className: "p-6 text-center text-sm", children: "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E2A\u0E23\u0E49\u0E32\u0E07\u0E15\u0E31\u0E27\u0E2D\u0E22\u0E48\u0E32\u0E07\u2026" });
                                     if (error) {

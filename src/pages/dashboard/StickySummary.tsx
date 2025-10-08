@@ -38,53 +38,13 @@ export default function StickySummary({
             type="number"
             inputMode="numeric"
             className="w-24 rounded bg-white/5 px-2 py-1 ring-1 ring-white/10 text-right text-[color:var(--ink)] outline-none focus:ring-gold/60"
-            value={taxYear ?? ''}
-            placeholder={String(currentThaiYear)}
+            value={taxYear ?? (currentThaiYear)}
             onChange={(e) => {
               const v = e.target.value.trim()
               setTaxYear(v === '' ? undefined : Number(v))
             }}
           />
         </label>
-
-        {/* ปุ่มนำทางภายในหน้า (ไม่ใช่ลิงก์) */}
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => go('company-sec')}
-            className="bp-btn bp-btn--sm bp-btn--ghost hover:text-[#EBDCA6]"
-            title="ไปข้อมูลบริษัท"
-          >
-            ไปข้อมูลบริษัท
-          </button>
-
-          <button
-            type="button"
-            onClick={() => go('directors-sec')}
-            className="bp-btn bp-btn--sm bp-btn--ghost hover:text-[#EBDCA6]"
-            title="ไปผู้บริหาร"
-          >
-            ไปผู้บริหาร
-          </button>
-
-          <button
-            type="button"
-            onClick={() => go('cit-table-sec')}
-            className="bp-btn bp-btn--sm bp-btn--ghost hover:text-[#EBDCA6]"
-            title="ไปตาราง ภ.ง.ด.50"
-          >
-            ไปตาราง ภ.ง.ด.50
-          </button>
-
-          <button
-            type="button"
-            onClick={() => go('return-sec')}
-            className="bp-btn bp-btn--sm bp-btn--ghost hover:text-[#EBDCA6]"
-            title="ไปสิทธิประโยชน์"
-          >
-            ไปสิทธิประโยชน์
-          </button>
-        </div>
 
         {/* สรุปตัวเลข */}
         <div className="w-full grid grid-cols-2 md:grid-cols-2 gap-3 mt-3">
