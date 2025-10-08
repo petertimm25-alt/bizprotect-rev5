@@ -11,7 +11,7 @@ export type Feature =
   | 'autosave'
   | 'priority_support'
   | 'director_limit_1'
-  | 'director_limit_5'
+  | 'director_limit_3'
   | 'director_limit_10'
 
 export const PLAN_FEATURES: Record<Plan, Feature[]> = {
@@ -31,7 +31,7 @@ export const PLAN_FEATURES: Record<Plan, Feature[]> = {
     'agent_identity_on_pdf',
     'knowledge_full',
     'autosave',
-    'director_limit_5',
+    'director_limit_3',
   ],
 
   // Ultra: ไม่จำกัด, ไม่มีลายน้ำ, feature เต็ม
@@ -64,7 +64,7 @@ export function isProOrUltra(plan?: Plan | null): boolean {
 export function getDirectorLimit(plan?: Plan | null): number {
   if (!plan) return 1
   if (hasFeature(plan, 'director_limit_10')) return 10
-  if (hasFeature(plan, 'director_limit_5')) return 3
+  if (hasFeature(plan, 'director_limit_3')) return 3
   return 1
 }
 
