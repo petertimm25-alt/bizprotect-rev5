@@ -1,3 +1,4 @@
+// src/components/ExportPDF.tsx
 import React from 'react'
 import type { AppState } from '../lib/types'
 import {
@@ -8,7 +9,6 @@ import { RULINGS } from '../data/rulings'
 import { useAuth } from '../lib/auth'
 import { hasFeature } from '../lib/roles'
 import { toast } from '../lib/toast'
-import { canExportServer } from '../lib/serverQuota' // รองรับ peek และหักจริง
 
 /* -------------------- Safe asset resolver -------------------- */
 function getBaseUrl(): string {
@@ -93,7 +93,10 @@ const styles = StyleSheet.create({
   td: { flex: 1, padding: 4, lineHeight: 1.25, color: THEME.ink },
   right: { textAlign: 'right' },
   note: { fontSize: 9, color: THEME.inkDim, marginTop: 6, lineHeight: 1.3 },
-  pageNum: { position: 'absolute', bottom: 12, left: 0, right: 0, textAlign: 'center', color: THEME.inkDim, fontSize: 9 },
+  pageNum: {
+    position: 'absolute', bottom: 12, left: 0, right: 0,
+    textAlign: 'center', color: THEME.inkDim, fontSize: 9,
+  },
   wmBox: { position: 'absolute', top: '28%', left: 0, right: 0, alignItems: 'center', opacity: THEME.watermarkOpacity },
   wmImg: { width: 380, height: 380, objectFit: 'contain' },
   brand: { position: 'absolute', top: 10, right: 19, width: 40, objectFit: 'contain', opacity: 0.95 },
@@ -206,7 +209,11 @@ function PageWithBrand({
   children,
   showWatermark,
   brandLogo,
-}: { children: React.ReactNode; showWatermark: boolean; brandLogo?: string }) {
+}: {
+  children: React.ReactNode
+  showWatermark: boolean
+  brandLogo?: string
+}) {
   return (
     <Page size="A4" style={styles.page}>
       <View style={styles.content}>{children}</View>
@@ -398,24 +405,12 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
   )
 }
 
-/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด -------------------- */
+/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด (ไม่มีโควต้า) -------------------- */
 export default function ExportPDF({ state }: { state: AppState }) {
   const [open, setOpen] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
-  const [remain, setRemain] = React.useState<number | null | undefined>(undefined)
   const { user } = useAuth()
   const plan = (user?.plan ?? 'free') as 'free' | 'pro' | 'ultra'
-
-  // แสดงยอดคงเหลือแบบ peek: pro/ultra -> server ควรส่ง remaining = null (ไม่จำกัด)
-  React.useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      if (!user) { setRemain(undefined); return }
-      const peek = await canExportServer({ peek: true })
-      if (mounted) setRemain(peek.ok ? (peek.remaining ?? null) : undefined)
-    })()
-    return () => { mounted = false }
-  }, [user?.id])
 
   const downloadNow = async () => {
     if (!user) {
@@ -424,23 +419,6 @@ export default function ExportPDF({ state }: { state: AppState }) {
     }
     if (busy) return
     setBusy(true)
-
-    // ตรวจ + (ถ้าจำกัด) หักที่ฝั่ง server ก่อนทุกครั้ง
-    const res = await canExportServer()
-    if (!res.ok) {
-      setBusy(false)
-      if (res.reason === 'unauthorized') {
-        toast('กรุณาเข้าสู่ระบบก่อน')
-      } else if (res.reason === 'quota_exceeded') {
-        toast('โควต้า Export ประจำเดือนเต็มแล้ว • อัปเกรดแผนหรือรอเดือนถัดไป')
-        ;(window.location as any).href = '/pricing'
-      } else {
-        toast(`ไม่สามารถตรวจโควตาได้ (${res.reason ?? 'error'})`)
-        console.error('can_export:', res)
-      }
-      return
-    }
-
     try {
       const blob = await pdf(<ProposalPDF state={state} plan={plan} />).toBlob()
       const url = URL.createObjectURL(blob)
@@ -449,10 +427,7 @@ export default function ExportPDF({ state }: { state: AppState }) {
       a.download = 'BizProtect-Proposal.pdf'
       a.click()
       URL.revokeObjectURL(url)
-
-      // อัปเดต badge: pro/ultra => null (ไม่จำกัด) • free ใช้ไม่ได้อยู่แล้ว
-      setRemain(res.remaining ?? null)
-      toast(res.remaining == null ? 'ดาวน์โหลดแล้ว (ไม่จำกัดโควตา)' : `ดาวน์โหลดแล้ว • เหลือ ${res.remaining} ครั้งในเดือนนี้`)
+      toast('ดาวน์โหลดแล้ว')
     } catch (e) {
       console.error('export failed:', e)
       toast('สร้างไฟล์ไม่สำเร็จ กรุณาลองใหม่')
@@ -461,13 +436,6 @@ export default function ExportPDF({ state }: { state: AppState }) {
     }
   }
 
-  const quotaBadge =
-    remain == null
-      ? <span className="ml-2 text-xs text-gold/80">(ไม่จำกัด)</span>
-      : typeof remain === 'number'
-        ? <span className="ml-2 text-xs text-gold/80">(เหลือ {remain} ครั้ง/เดือน)</span>
-        : <span className="ml-2 text-xs text-gold/50">(กำลังตรวจสอบ…)</span>
-
   return (
     <>
       <button
@@ -475,7 +443,7 @@ export default function ExportPDF({ state }: { state: AppState }) {
         className="rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95"
         title="ดูตัวอย่างแล้วดาวน์โหลด"
       >
-        Export PDF {quotaBadge}
+        Export PDF
       </button>
 
       {open && (
