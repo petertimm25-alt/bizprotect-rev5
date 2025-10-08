@@ -15,6 +15,8 @@ import PITSection from './dashboard/PITSection'
 import ReturnSection from './dashboard/ReturnSection'
 import PresenterSection from './dashboard/PresenterSection'
 
+const EXPORT_ANCHOR_ID = 'export-anchor'
+
 export default function Dashboard() {
   const [data, setData] = React.useState<AppState>(() => load<AppState>(initialState))
   useDebounceEffect(() => save(data), [data], 500)
@@ -163,6 +165,16 @@ export default function Dashboard() {
     if (history.replaceState) history.replaceState(null, '', `#${id}`)
   }
 
+  // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
+  const scrollToExport = () => {
+    const el = document.getElementById(EXPORT_ANCHOR_ID)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   const recProductName = (data as any).recProductName as string
   const recPayYears   = (data as any).recPayYears as string
   const recCoverage   = (data as any).recCoverage as string
@@ -174,6 +186,9 @@ export default function Dashboard() {
       {/* ===== Header ===== */}
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">Keyman Corporate Policy Calculator</h2>
+
+        {/* Anchor สำหรับปุ่มกลับไปสั่ง Export */}
+        <span id={EXPORT_ANCHOR_ID} className="sr-only" aria-hidden="true" />
 
         {canExport ? (
           <ExportPDF state={data} />
@@ -196,6 +211,7 @@ export default function Dashboard() {
         taxSaved_afterPremGross={taxSaved_afterPremGross}
         taxSavedPct_afterPremGross={taxSavedPct_afterPremGross}
         combinedCost={combinedCost}
+        
       />
 
       {/* ===== Company Section ===== */}
@@ -261,6 +277,20 @@ export default function Dashboard() {
           handleLogoChange={handleLogoChange}
         />
       )}
+
+      {/* ===== ปุ่มกลับไปสั่ง Export PDF (อยู่ล่างสุดใต้ Presenter) ===== */}
+      <div className="pt-2">
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={scrollToExport}
+            className="bp-btn bp-btn-primary font-bold"
+            title="กลับไปด้านบนเพื่อสั่ง Export PDF"
+          >
+            ↑ กลับไปสั่ง Export PDF
+          </button>
+        </div>
+      </div>
     </main>
   )
 }

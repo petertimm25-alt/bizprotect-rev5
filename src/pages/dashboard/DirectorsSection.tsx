@@ -152,7 +152,7 @@ export default function DirectorsSection({
       </div>
 
       {directors.length === 0 && (
-        <Card title="ยังไม่มีรายชื่อกรรมการ">
+        <Card title="ยังไม่มีรายชื่อผู้บริหาร">
           <div className="text-sm text-[color:var(--ink-dim)]">
             โปรดเพิ่มรายชื่อกรรมการในส่วนนี้ แล้วกำหนดรายละเอียดรายคน
           </div>
