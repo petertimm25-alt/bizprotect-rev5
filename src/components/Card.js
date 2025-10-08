@@ -1,0 +1,13 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+/** การ์ด Navy/Gold gradient + เส้น/โกลว์ทอง */
+export default function Card({ title, className, children }) {
+    return (_jsxs("div", { className: [
+            'relative overflow-hidden rounded-2xl p-6 backdrop-blur',
+            'bg-gradient-to-b from-[#142440]/80 to-[#0B1529]/80',
+            'ring-1 ring-[#D4AF37]/70',
+            'shadow-[0_10px_28px_rgba(0,0,0,0.22),_0_0_70px_rgba(235,220,166,0.16)]',
+            'before:content-[""] before:absolute before:inset-0 before:rounded-2xl before:pointer-events-none before:shadow-[inset_0_0_0_1px_rgba(235,220,166,0.22)]',
+            'after:content-[""] after:absolute after:inset-0 after:rounded-2xl after:pointer-events-none after:bg-[radial-gradient(80%_60%_at_50%_-20%,rgba(235,220,166,0.10),transparent)]',
+            className
+        ].filter(Boolean).join(' '), children: [title ? (_jsx("h3", { className: "text-base md:text-lg font-semibold text-[#EBDCA6]", children: title })) : null, _jsx("div", { className: title ? 'mt-3' : '', children: children })] }));
+}

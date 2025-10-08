@@ -1,0 +1,3 @@
+import { jsxs as _jsxs } from "react/jsx-runtime";
+import React from 'react';
+export default function ThemeToggle() { const [theme, setTheme] = React.useState(document.documentElement.dataset.theme || 'navy'); return (_jsxs("button", { onClick: () => { const n = theme === 'ivory' ? 'navy' : 'ivory'; document.documentElement.dataset.theme = n; setTheme(n); }, className: 'text-sm px-3 py-1 rounded border border-gold/40 hover:text-gold transition', title: '\u0E2A\u0E25\u0E31\u0E1A\u0E18\u0E35\u0E21 Navy\u2013Gold \u2194 Ivory\u2013Gold', children: ["Theme: ", theme === 'ivory' ? 'Ivory–Gold' : 'Navy–Gold'] })); }

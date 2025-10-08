@@ -1,13 +1,31 @@
+// src/pages/dashboard/DirectorsSection.tsx
 import React from 'react'
 import Card from '../../components/Card'
 import NumberInput from '../../components/NumberInput'
 import { pitTax, marginalRate, progressiveGrossUp } from '../../lib/tax'
 import { emptyIfZero, fmt2 } from '../../components/Num'
 
+// ===== Types (กันพลาด any) =====
 type Sex = 'male' | 'female'
 
+type Director = {
+  id: string
+  name?: string | null
+  sex?: Sex
+  age?: number | null
+  annualSalary?: number | null
+  personalInsurancePremium?: number | null
+  sumAssured?: number | null
+  surrenderY7?: number | null
+  surrenderAge60?: number | null
+  surrenderAge70?: number | null
+  surrenderAge99?: number | null
+  // เผื่อฟิลด์อื่นในอนาคต
+  [k: string]: unknown
+}
+
 type Props = {
-  directors: any[]
+  directors: Director[]
   limit: number
   setData: React.Dispatch<React.SetStateAction<any>>
   personalExpense: number
@@ -18,18 +36,29 @@ type Props = {
   setRecFields: (p: Partial<{ recProductName: string; recPayYears: string; recCoverage: string }>) => void
 }
 
-const getSex = (d: any): Sex => (d.sex === 'female' ? 'female' : 'male')
-const getAge = (d: any): number => (typeof d.age === 'number' ? d.age : 35)
-const getSumAssured = (d: any): number => (typeof d.sumAssured === 'number' ? d.sumAssured : 10_000_000)
-const getPremium = (d: any): number => (typeof d.personalInsurancePremium === 'number' ? d.personalInsurancePremium : 200_000)
-const getSurr = (d: any, key: string): number | undefined => (typeof d[key] === 'number' ? d[key] : undefined)
+// ===== Safe getters =====
+const getSex = (d: Director): Sex => (d.sex === 'female' ? 'female' : 'male')
+const getAge = (d: Director): number => (typeof d.age === 'number' && !Number.isNaN(d.age) ? d.age : 35)
+const getSumAssured = (d: Director): number =>
+  typeof d.sumAssured === 'number' && !Number.isNaN(d.sumAssured) ? d.sumAssured : 10_000_000
+const getPremium = (d: Director): number =>
+  typeof d.personalInsurancePremium === 'number' && !Number.isNaN(d.personalInsurancePremium)
+    ? d.personalInsurancePremium
+    : 200_000
+const getSurr = (d: Director, key: keyof Director): number | undefined => {
+  const v = d[key]
+  return typeof v === 'number' && !Number.isNaN(v) ? v : undefined
+}
 
+// ===== Component =====
 export default function DirectorsSection({
   directors, limit, setData, personalExpense, personalAllowance,
   recProductName, recPayYears, recCoverage, setRecFields
 }: Props) {
   // อายุแบบ draft ต่อคน (ใน section นี้เท่านั้น)
   const [ageDraft, setAgeDraft] = React.useState<Record<string, string>>({})
+
+  // ซิงก์ ageDraft เมื่อรายการกรรมการเปลี่ยน
   React.useEffect(() => {
     setAgeDraft(prev => {
       const next = { ...prev }
@@ -38,6 +67,7 @@ export default function DirectorsSection({
           next[d.id] = d.age != null ? String(d.age) : ''
         }
       })
+      // ล้าง entry ที่ไม่มีแล้ว
       Object.keys(next).forEach(id => {
         if (!directors.find(d => d.id === id)) delete next[id]
       })
@@ -45,21 +75,32 @@ export default function DirectorsSection({
     })
   }, [directors])
 
-  const addDirector = () =>
-    directors.length < limit &&
+  const canAdd = directors.length < limit
+
+  const addDirector = () => {
+    if (!canAdd) return
     setData((s: any) => ({
       ...s,
       company: {
         ...s.company,
         directors: [
           ...s.company.directors,
-          { id: String(Date.now()), name: `ผู้บริหาร ${s.company.directors.length + 1}`, annualSalary: undefined as any, personalInsurancePremium: undefined as any }
-        ]
-      }
+          {
+            id: String(Date.now()),
+            name: `ผู้บริหาร ${s.company.directors.length + 1}`,
+            annualSalary: undefined as any,
+            personalInsurancePremium: undefined as any,
+          } as Director,
+        ],
+      },
     }))
+  }
 
   const removeLast = () =>
-    setData((s: any) => ({ ...s, company: { ...s.company, directors: s.company.directors.slice(0, -1) } }))
+    setData((s: any) => ({
+      ...s,
+      company: { ...s.company, directors: s.company.directors.slice(0, -1) },
+    }))
 
   return (
     <section id="directors-sec" className="space-y-4">
@@ -85,9 +126,12 @@ export default function DirectorsSection({
             placeholder="ระยะเวลาคุ้มครอง เช่น ถึงอายุ 99 ปี"
           />
         </div>
-        <div className="text-xs text-[color:var(--ink-dim)] mt-2">* ทั้ง 3 ฟิลด์เก็บเป็น string เพื่อรองรับหลายบริษัทประกัน</div>
+        <div className="text-xs text-[color:var(--ink-dim)] mt-2">
+          * ทั้ง 3 ฟิลด์เก็บเป็น string เพื่อรองรับหลายบริษัทประกัน
+        </div>
       </Card>
 
+      {/* ปุ่มเพิ่ม/ลบ */}
       <div className="flex items-center justify-end gap-2">
         <button
           onClick={removeLast}
@@ -100,8 +144,8 @@ export default function DirectorsSection({
         <button
           onClick={addDirector}
           className="bp-btn bp-btn--sm bp-btn--ghost disabled:opacity-40 hover:text-gold-2"
-          disabled={directors.length >= limit}
-          title={directors.length < limit ? 'เพิ่มผู้บริหาร' : `ครบสูงสุด ${limit} คนแล้ว`}
+          disabled={!canAdd}
+          title={canAdd ? 'เพิ่มผู้บริหาร' : `ครบสูงสุด ${limit} คนแล้ว`}
         >
           + เพิ่ม (สูงสุด {limit})
         </button>
@@ -109,7 +153,9 @@ export default function DirectorsSection({
 
       {directors.length === 0 && (
         <Card title="ยังไม่มีรายชื่อกรรมการ">
-          <div className="text-sm text-[color:var(--ink-dim)]">โปรดเพิ่มรายชื่อกรรมการในส่วนนี้ แล้วกำหนดรายละเอียดรายคน</div>
+          <div className="text-sm text-[color:var(--ink-dim)]">
+            โปรดเพิ่มรายชื่อกรรมการในส่วนนี้ แล้วกำหนดรายละเอียดรายคน
+          </div>
         </Card>
       )}
 
@@ -124,19 +170,36 @@ export default function DirectorsSection({
         const surrAge70 = getSurr(d, 'surrenderAge70')
         const surrAge99 = getSurr(d, 'surrenderAge99')
 
-        // PIT trio preview
-        const base = d.annualSalary ?? 0
-        const prem = d.personalInsurancePremium ?? 0
-        const g3 = progressiveGrossUp(base, prem, personalExpense + personalAllowance)
-        const tax1 = Math.max(0, base - personalExpense - personalAllowance)
+        // PIT trio preview (กัน NaN ทุกทางเข้า)
+        const base = typeof d.annualSalary === 'number' && !Number.isNaN(d.annualSalary) ? d.annualSalary : 0
+        const prem =
+          typeof d.personalInsurancePremium === 'number' && !Number.isNaN(d.personalInsurancePremium)
+            ? d.personalInsurancePremium
+            : 0
+
+        const safeExpense = Number.isFinite(personalExpense) ? personalExpense : 0
+        const safeAllowance = Number.isFinite(personalAllowance) ? personalAllowance : 0
+
+        const g3 = progressiveGrossUp(base, prem, safeExpense + safeAllowance)
+        const tax1 = Math.max(0, base - safeExpense - safeAllowance)
         const pit1 = pitTax(tax1)
-        const tax2 = Math.max(0, base + prem - personalExpense - personalAllowance)
+        const tax2 = Math.max(0, base + prem - safeExpense - safeAllowance)
         const pit2 = pitTax(tax2)
-        const tax3 = Math.max(0, base + prem + g3 - personalExpense - personalAllowance)
+        const tax3 = Math.max(0, base + prem + g3 - safeExpense - safeAllowance)
         const pit3 = pitTax(tax3)
         const netY1 = base - pit1
         const netY2 = base - pit2
         const netY3 = base - pit3 + g3
+
+        // helper อัปเดตฟิลด์ของ director แบบ immutable ปลอดภัย
+        const patchDirector = (patch: Partial<Director>) =>
+          setData((s: any) => ({
+            ...s,
+            company: {
+              ...s.company,
+              directors: s.company.directors.map((x: Director) => (x.id === d.id ? { ...x, ...patch } : x)),
+            },
+          }))
 
         return (
           <Card key={d.id}>
@@ -155,11 +218,8 @@ export default function DirectorsSection({
                   <div className="text-sm text-[color:var(--ink-dim)] mb-1">ชื่อ/ตำแหน่ง</div>
                   <input
                     className="w-full rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10 outline-none focus:ring-gold/60"
-                    value={d.name}
-                    onChange={e => setData((s: any) => ({
-                      ...s,
-                      company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, name: e.target.value } : x) }
-                    }))}
+                    value={d.name ?? ''}
+                    onChange={e => patchDirector({ name: e.target.value })}
                     placeholder="เช่น กรรมการผู้จัดการ"
                   />
                 </div>
@@ -174,9 +234,7 @@ export default function DirectorsSection({
                         name={`sex-${d.id}`}
                         className="accent-gold"
                         checked={sex === 'male'}
-                        onChange={() => setData((s: any) => ({
-                          ...s, company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, sex: 'male' } : x) }
-                        }))}
+                        onChange={() => patchDirector({ sex: 'male' })}
                       />
                       <span>ชาย</span>
                     </label>
@@ -186,9 +244,7 @@ export default function DirectorsSection({
                         name={`sex-${d.id}`}
                         className="accent-gold"
                         checked={sex === 'female'}
-                        onChange={() => setData((s: any) => ({
-                          ...s, company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, sex: 'female' } : x) }
-                        }))}
+                        onChange={() => patchDirector({ sex: 'female' })}
                       />
                       <span>หญิง</span>
                     </label>
@@ -209,29 +265,13 @@ export default function DirectorsSection({
                     onBlur={() => {
                       const raw = (ageDraft[d.id] ?? '').replace(/[^\d]/g, '')
                       if (raw === '') {
-                        setData((s: any) => ({
-                          ...s,
-                          company: {
-                            ...s.company,
-                            directors: s.company.directors.map((x: any) =>
-                              x.id === d.id ? { ...x, age: undefined as any } : x
-                            )
-                          }
-                        }))
+                        patchDirector({ age: undefined })
                         return
                       }
                       let n = Math.floor(Number(raw))
                       if (!Number.isNaN(n)) {
                         n = Math.max(1, Math.min(80, n))
-                        setData((s: any) => ({
-                          ...s,
-                          company: {
-                            ...s.company,
-                            directors: s.company.directors.map((x: any) =>
-                              x.id === d.id ? { ...x, age: n } : x
-                            )
-                          }
-                        }))
+                        patchDirector({ age: n })
                         setAgeDraft(s => ({ ...s, [d.id]: String(n) }))
                       }
                     }}
@@ -244,11 +284,8 @@ export default function DirectorsSection({
                 <div>
                   <div className="text-sm text-[color:var(--ink-dim)] mb-1">เงินได้ ม.40(1) (บาท/ปี)</div>
                   <NumberInput
-                    value={emptyIfZero(d.annualSalary)}
-                    onChange={v => setData((s: any) => ({
-                      ...s,
-                      company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, annualSalary: v } : x) }
-                    }))}
+                    value={emptyIfZero(d.annualSalary as any)}
+                    onChange={(v) => patchDirector({ annualSalary: v ?? null })}
                     placeholder="เช่น 1,200,000"
                   />
                 </div>
@@ -260,10 +297,7 @@ export default function DirectorsSection({
                   <div className="text-sm text-[color:var(--ink-dim)] mb-1">ทุนประกันชีวิต (บาท)</div>
                   <NumberInput
                     value={sumAssured}
-                    onChange={(v) => setData((s: any) => ({
-                      ...s,
-                      company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, sumAssured: v ?? 0 } : x) }
-                    }))}
+                    onChange={(v) => patchDirector({ sumAssured: v ?? 0 })}
                     placeholder="เช่น 10,000,000"
                   />
                 </div>
@@ -271,10 +305,7 @@ export default function DirectorsSection({
                   <div className="text-sm text-[color:var(--ink-dim)] mb-1">เบี้ยประกัน (บาท/ปี)</div>
                   <NumberInput
                     value={yearlyPremium}
-                    onChange={(v) => setData((s: any) => ({
-                      ...s,
-                      company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, personalInsurancePremium: v ?? 0 } : x) }
-                    }))}
+                    onChange={(v) => patchDirector({ personalInsurancePremium: v ?? 0 })}
                     placeholder="เช่น 200,000"
                   />
                 </div>
@@ -282,20 +313,17 @@ export default function DirectorsSection({
 
               {/* มูลค่ารับซื้อคืน */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[
+                {([
                   ['มูลค่ารับซื้อคืน ปีที่ 7', 'surrenderY7', surrY7],
                   ['มูลค่ารับซื้อคืน เมื่ออายุ 60 ปี', 'surrenderAge60', surrAge60],
                   ['มูลค่ารับซื้อคืน เมื่ออายุ 70 ปี', 'surrenderAge70', surrAge70],
                   ['มูลค่ารับซื้อคืน เมื่ออายุ 99 ปี', 'surrenderAge99', surrAge99],
-                ].map(([label, key, val]) => (
-                  <div key={key as string}>
+                ] as const).map(([label, key, val]) => (
+                  <div key={key}>
                     <div className="text-sm text-[color:var(--ink-dim)] mb-1">{label}</div>
                     <NumberInput
-                      value={val as number | undefined}
-                      onChange={(v) => setData((s: any) => ({
-                        ...s,
-                        company: { ...s.company, directors: s.company.directors.map((x: any) => x.id === d.id ? { ...x, [key as string]: v ?? undefined } : x) }
-                      }))}
+                      value={val}
+                      onChange={(v) => patchDirector({ [key]: v ?? undefined } as Partial<Director>)}
                       placeholder="*กรอกข้อมูลจากแอปฯ"
                     />
                   </div>
