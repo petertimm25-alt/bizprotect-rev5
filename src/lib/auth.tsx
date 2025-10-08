@@ -1,7 +1,7 @@
 // src/lib/auth.tsx
 import React, { createContext, useContext } from 'react'
 import { createClient, type User } from '@supabase/supabase-js'
-import { type Plan, hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles'
+import { type Plan, hasFeature, getDirectorLimit } from './roles'
 
 export type UserLite = { id: string; email: string | null; name?: string | null; plan?: Plan }
 
@@ -34,8 +34,6 @@ function mapUser(u: User | null): UserLite | null {
 
 type Entitlement = {
   directorsMax: number
-  /** สำคัญ: ให้ตรงกับ roles.ts => number | 'unlimited' */
-  pdfMonthlyQuota: number | 'unlimited'
   export_pdf: boolean
   no_watermark: boolean
   agent_identity_on_pdf: boolean
@@ -77,10 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user?.plan ?? 'free'
   }, [user?.plan, profilePlan])
 
-  // รวมสิทธิ์จาก roles.ts
+  // รวมสิทธิ์จาก roles.ts (ไม่มีโควต้าแล้ว)
   const ent: Entitlement = React.useMemo(() => ({
     directorsMax: getDirectorLimit(plan),
-    pdfMonthlyQuota: getPdfMonthlyQuota(plan), // <- ตรง type แล้ว
     export_pdf: hasFeature(plan, 'export_pdf'),
     no_watermark: hasFeature(plan, 'no_watermark'),
     agent_identity_on_pdf: hasFeature(plan, 'agent_identity_on_pdf'),

@@ -2,7 +2,7 @@ import { jsx as _jsx } from "react/jsx-runtime";
 // src/lib/auth.tsx
 import React, { createContext, useContext } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles';
+import { hasFeature, getDirectorLimit } from './roles';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
@@ -45,10 +45,9 @@ export function AuthProvider({ children }) {
             return profilePlan;
         return user?.plan ?? 'free';
     }, [user?.plan, profilePlan]);
-    // รวมสิทธิ์จาก roles.ts
+    // รวมสิทธิ์จาก roles.ts (ไม่มีโควต้าแล้ว)
     const ent = React.useMemo(() => ({
         directorsMax: getDirectorLimit(plan),
-        pdfMonthlyQuota: getPdfMonthlyQuota(plan), // <- ตรง type แล้ว
         export_pdf: hasFeature(plan, 'export_pdf'),
         no_watermark: hasFeature(plan, 'no_watermark'),
         agent_identity_on_pdf: hasFeature(plan, 'agent_identity_on_pdf'),
