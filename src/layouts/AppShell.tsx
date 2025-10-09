@@ -2,26 +2,29 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import HeaderNav from '../components/HeaderNav'
-import DebugBar from '../components/DebugBar'
+import { useAuth } from '../lib/auth'
+
+function DebugBar() {
+  const { user, plan, ent, loading } = useAuth()
+  return (
+    <div className="text-xs bg-black/70 text-green-300 px-4 py-1 font-mono">
+      <div>loading: {String(loading)}</div>
+      <div>user: {user ? `${user.email} (${user.id.slice(0,6)})` : 'null'}</div>
+      <div>plan: {plan}</div>
+      <div>ent.export_pdf: {String(ent?.export_pdf)}</div>
+      <div>ent.directorsMax: {ent?.directorsMax}</div>
+    </div>
+  )
+}
 
 export default function AppShell() {
   return (
-    <div className="min-h-screen bg-[#0B1B2B] text-white">
-      {/* Header ติดบน */}
+    <div className="min-h-screen flex flex-col">
       <HeaderNav />
-
-      {/* Content */}
-      <main className="pt-16">
-        {/* คอนเทนต์ภายในหน้าต่าง ๆ */}
+      <DebugBar />
+      <main className="flex-1">
         <Outlet />
       </main>
-
-      {/* Footer เล็ก ๆ */}
-      <footer className="mt-14 border-t border-white/10">
-        <div className="mx-auto max-w-6xl px-6 py-6 text-xs text-white/60">
-          © {new Date().getFullYear()} BizProtect • All rights reserved.
-        </div>
-      </footer>
     </div>
   )
 }
