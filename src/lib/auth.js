@@ -2,24 +2,36 @@ import { jsx as _jsx } from "react/jsx-runtime";
 // src/lib/auth.tsx
 import React, { createContext, useContext } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { hasFeature, getDirectorLimit } from './roles';
+import { hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
-// ===== Dev override for plan (Method A) =====
-const readPlanOverride = () => {
-    if (typeof window === 'undefined')
-        return null;
-    const v = localStorage.getItem('bp:plan');
-    return v === 'free' || v === 'pro' || v === 'ultra' ? v : null;
+// ---------- Safe Dev Override ----------
+const allowOverride = () => {
+    const host = typeof window !== 'undefined' ? window.location.hostname : '';
+    const allowByHost = host === 'localhost' || host === '127.0.0.1';
+    const allowByEnv = import.meta?.env?.VITE_ENABLE_PLAN_OVERRIDE === '1';
+    return allowByHost || allowByEnv;
 };
-// แปลง Supabase.User -> UserLite
+const readPlanOverride = () => {
+    if (!allowOverride())
+        return null;
+    try {
+        const v = localStorage.getItem('bp:plan');
+        return v === 'free' || v === 'pro' || v === 'ultra' ? v : null;
+    }
+    catch {
+        return null;
+    }
+};
+// ---------- map User ----------
 function mapUser(u) {
     if (!u)
         return null;
     const metaPlan = u.user_metadata?.plan;
+    // ไม่มี override ใน prod; dev เท่านั้น
     const plan = readPlanOverride() ?? metaPlan ?? 'free';
     return {
         id: u.id,
@@ -32,22 +44,30 @@ const AuthCtx = createContext(undefined);
 export function AuthProvider({ children }) {
     const [user, setUser] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    // แผนจากตาราง profiles (ถ้ามี) — override meta/override
     const [profilePlan, setProfilePlan] = React.useState(null);
     const envReady = !!supabase;
     const envError = envReady ? undefined : 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local';
-    // แผนสุดท้ายที่ใช้จริง: override -> profiles.plan -> user.metadata.plan -> 'free'
+    // ล้าง override อัตโนมัติถ้าไม่อนุญาตให้ใช้
+    React.useEffect(() => {
+        if (!allowOverride()) {
+            try {
+                localStorage.removeItem('bp:plan');
+            }
+            catch { }
+        }
+    }, []);
+    // ใช้ profiles.plan → user.meta.plan → 'free' (override ได้เฉพาะ dev)
     const plan = React.useMemo(() => {
-        const override = readPlanOverride();
-        if (override)
-            return override;
+        const ov = readPlanOverride();
+        if (ov)
+            return ov;
         if (profilePlan)
             return profilePlan;
         return user?.plan ?? 'free';
     }, [user?.plan, profilePlan]);
-    // รวมสิทธิ์จาก roles.ts (ไม่มีโควต้าแล้ว)
     const ent = React.useMemo(() => ({
         directorsMax: getDirectorLimit(plan),
+        pdfMonthlyQuota: getPdfMonthlyQuota(plan),
         export_pdf: hasFeature(plan, 'export_pdf'),
         no_watermark: hasFeature(plan, 'no_watermark'),
         agent_identity_on_pdf: hasFeature(plan, 'agent_identity_on_pdf'),
@@ -82,16 +102,11 @@ export function AuthProvider({ children }) {
         boot();
         return () => sub?.data?.subscription?.unsubscribe?.();
     }, []);
-    // ดึง profiles.plan จากฐานข้อมูล (ถ้ามี)
     const fetchProfilePlan = async (uid) => {
         try {
             if (!supabase)
                 return null;
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('plan')
-                .eq('id', uid)
-                .single();
+            const { data, error } = await supabase.from('profiles').select('plan').eq('id', uid).single();
             if (error || !data?.plan)
                 return null;
             const p = data.plan;
@@ -114,8 +129,7 @@ export function AuthProvider({ children }) {
         localStorage.setItem('bp_pending_email', email);
         const redirectTo = `${window.location.origin}/auth/callback`;
         const { error } = await supabase.auth.signInWithOtp({
-            email,
-            options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
+            email, options: { emailRedirectTo: redirectTo, shouldCreateUser: true }
         });
         if (error)
             throw error;
@@ -128,15 +142,9 @@ export function AuthProvider({ children }) {
         setProfilePlan(null);
     };
     const value = {
-        user,
-        loading,
-        envReady, envError,
-        plan,
-        ent,
-        signInWithEmail,
-        signOut,
-        logout: signOut,
-        refreshProfile,
+        user, loading, envReady, envError,
+        plan, ent,
+        signInWithEmail, signOut, logout: signOut, refreshProfile,
     };
     return _jsx(AuthCtx.Provider, { value: value, children: children });
 }
