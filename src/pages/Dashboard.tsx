@@ -1,3 +1,4 @@
+// src/pages/Dashboard.tsx
 import React from 'react'
 import ExportPDF from '../components/ExportPDF'
 import { load, save } from '../lib/storage'
@@ -188,7 +189,7 @@ export default function Dashboard() {
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">Keyman Corporate Policy Calculator</h2>
 
         {/* Anchor สำหรับปุ่มกลับไปสั่ง Export */}
-        <span id={EXPORT_ANCHOR_ID} className="sr-only" aria-hidden="true" />
+        <span id={EXPORT_ANCHOR_ID} className="block h-0 scroll-mt-24" aria-hidden="true" />
 
         {canExport ? (
           <ExportPDF state={data} />
@@ -211,7 +212,6 @@ export default function Dashboard() {
         taxSaved_afterPremGross={taxSaved_afterPremGross}
         taxSavedPct_afterPremGross={taxSavedPct_afterPremGross}
         combinedCost={combinedCost}
-        
       />
 
       {/* ===== Company Section ===== */}
