@@ -22,14 +22,12 @@ export default function Dashboard() {
   const [data, setData] = React.useState<AppState>(() => load<AppState>(initialState))
   useDebounceEffect(() => save(data), [data], 500)
 
-  // ===== Entitlements =====
   const { user, ent } = useAuth()
   const canExport = !!user && ent.export_pdf
   const limit = ent.directorsMax
   const canEditPresenter = ent.agent_identity_on_pdf
   const canUploadLogo = ent.custom_branding
 
-  // Trim directors if exceeds plan limit
   React.useEffect(() => {
     setData(s => {
       const ds = s.company.directors
@@ -41,25 +39,21 @@ export default function Dashboard() {
     })
   }, [limit])
 
-  // Ensure presenter defaults once
   React.useEffect(() => {
-    setData(s => (s as any).presenter
-      ? s
-      : {
-          ...s,
-          presenter: {
-            name: 'สมคิด',
-            phone: '08x-xxx-xxxx',
-            email: 'somkid@company.com',
-            company: '',
-            licenseNo: '',
-            logoDataUrl: undefined
-          } as any
-        })
+    setData(s => (s as any).presenter ? s : {
+      ...s,
+      presenter: {
+        name: 'สมคิด',
+        phone: '08x-xxx-xxxx',
+        email: 'somkid@company.com',
+        company: '',
+        licenseNo: '',
+        logoDataUrl: undefined
+      } as any
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Default “แบบประกันฯ แนะนำ”
   React.useEffect(() => {
     setData(s => {
       const cur: any = s
@@ -73,7 +67,6 @@ export default function Dashboard() {
     })
   }, [])
 
-  // ------------- Shortcuts / derived -------------
   const c = data.company
   const ds = c.directors
 
@@ -164,7 +157,6 @@ export default function Dashboard() {
   const setRecFields = (p: Partial<{ recProductName: string; recPayYears: string; recCoverage: string }>) =>
     setData(s => ({ ...(s as any), ...p } as any))
 
-  // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
   const scrollToExport = () => {
     const el = document.getElementById(EXPORT_ANCHOR_ID)
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -173,17 +165,16 @@ export default function Dashboard() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-      {/* ===== Header ===== */}
-      <div className="mb-3 flex items-center justify-between gap-3">
+      {/* ===== Header (แก้เลย์เอาต์ให้ไม่บีบปุ่ม) ===== */}
+      <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_auto] items-start">
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">
           Keyman Corporate Policy Calculator
         </h2>
 
-        {/* Anchor สำหรับปุ่มกลับไปสั่ง Export */}
+        {/* Anchor สำหรับเลื่อนกลับขึ้นมาที่ปุ่ม */}
         <span id={EXPORT_ANCHOR_ID} className="block h-0 scroll-mt-24" aria-hidden="true" />
 
-        {/* >>> กันโดน flex-shrink จนหายบนจอแคบ <<< */}
-        <div className="shrink-0">
+        <div className="justify-self-end shrink-0">
           {canExport ? (
             <ExportPDF state={data} />
           ) : (
@@ -196,9 +187,17 @@ export default function Dashboard() {
             </button>
           )}
         </div>
+
+        {/* ปุ่มสำรองสำหรับมือถือ (แสดงเฉพาะจอเล็ก) */}
+        {canExport && (
+          <div className="sm:hidden col-span-full">
+            <div className="shrink-0">
+              <ExportPDF state={data} />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ===== Sticky Summary ===== */}
       <StickySummary
         taxYear={taxYear}
         currentThaiYear={currentThaiYear}
@@ -208,7 +207,6 @@ export default function Dashboard() {
         combinedCost={combinedCost}
       />
 
-      {/* ===== Company Section ===== */}
       <CompanySection
         company={c}
         interest={interest}
@@ -218,7 +216,6 @@ export default function Dashboard() {
         onClear={handleClearCompany}
       />
 
-      {/* ===== Directors ===== */}
       <DirectorsSection
         directors={ds}
         limit={limit}
@@ -231,7 +228,6 @@ export default function Dashboard() {
         setRecFields={setRecFields}
       />
 
-      {/* ===== CIT Table ===== */}
       <CITTable
         taxYear={taxYear}
         income={income}
@@ -252,17 +248,14 @@ export default function Dashboard() {
         CIT_RATE={CIT_RATE}
       />
 
-      {/* ===== PIT (per director) ===== */}
       <PITSection
         directors={ds}
         personalExpense={personalExpense}
         personalAllowance={personalAllowance}
       />
 
-      {/* ===== Return overview ===== */}
       <ReturnSection directors={ds} />
 
-      {/* ===== Presenter Info ===== */}
       {canEditPresenter && (
         <PresenterSection
           data={data}
@@ -272,7 +265,6 @@ export default function Dashboard() {
         />
       )}
 
-      {/* ===== ปุ่มกลับไปสั่ง Export PDF (ล่างสุด) ===== */}
       <div className="pt-2">
         <div className="mt-4 flex justify-center">
           <button
