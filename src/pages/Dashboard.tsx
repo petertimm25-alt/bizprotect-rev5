@@ -22,10 +22,9 @@ export default function Dashboard() {
   const [data, setData] = React.useState<AppState>(() => load<AppState>(initialState))
   useDebounceEffect(() => save(data), [data], 500)
 
-  // ===== Entitlements (จาก useAuth) =====
-  const { user, ent, plan } = useAuth() as any
-  // กันพลาดชั่วคราว: เปิดปุ่มให้ PRO/ULTRA แน่ๆ แม้ ent จะยังโหลดไม่ทัน
-  const canExport = !!user && (ent.export_pdf || plan === 'pro' || plan === 'ultra')
+  // ===== Entitlements =====
+  const { user, ent } = useAuth()
+  const canExport = !!user && ent.export_pdf
   const limit = ent.directorsMax
   const canEditPresenter = ent.agent_identity_on_pdf
   const canUploadLogo = ent.custom_branding
@@ -60,7 +59,7 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ===== default “แบบประกันฯ แนะนำ” 3 ฟิลด์ (string) =====
+  // Default “แบบประกันฯ แนะนำ”
   React.useEffect(() => {
     setData(s => {
       const cur: any = s
@@ -159,50 +158,44 @@ export default function Dashboard() {
     }))
   }
 
-  // helper: scroll ไปยัง element ตาม id แล้วอัปเดต hash โดยไม่เปลี่ยนหน้า
-  const go = (id: string) => {
-    const el = document.getElementById(id)
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    if (history.replaceState) history.replaceState(null, '', `#${id}`)
-  }
-
-  // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
-  const scrollToExport = () => {
-    const el = document.getElementById(EXPORT_ANCHOR_ID)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-  }
-
   const recProductName = (data as any).recProductName as string
   const recPayYears   = (data as any).recPayYears as string
   const recCoverage   = (data as any).recCoverage as string
   const setRecFields = (p: Partial<{ recProductName: string; recPayYears: string; recCoverage: string }>) =>
     setData(s => ({ ...(s as any), ...p } as any))
 
+  // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
+  const scrollToExport = () => {
+    const el = document.getElementById(EXPORT_ANCHOR_ID)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
       {/* ===== Header ===== */}
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-3xl font-semibold text-[#EBDCA6]">Keyman Corporate Policy Calculator</h2>
+        <h2 className="text-3xl font-semibold text-[#EBDCA6]">
+          Keyman Corporate Policy Calculator
+        </h2>
 
         {/* Anchor สำหรับปุ่มกลับไปสั่ง Export */}
         <span id={EXPORT_ANCHOR_ID} className="block h-0 scroll-mt-24" aria-hidden="true" />
 
-        {canExport ? (
-          <ExportPDF state={data} />
-        ) : (
-          <button
-            onClick={() => (window.location.href = '/pricing')}
-            className="inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10"
-            title="อัปเกรดเป็น Pro เพื่อใช้งาน Export PDF (ไม่จำกัด)"
-          >
-            Upgrade to Export PDF
-          </button>
-        )}
+        {/* >>> กันโดน flex-shrink จนหายบนจอแคบ <<< */}
+        <div className="shrink-0">
+          {canExport ? (
+            <ExportPDF state={data} />
+          ) : (
+            <button
+              onClick={() => (window.location.href = '/pricing')}
+              className="inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10"
+              title="อัปเกรดเป็น Pro เพื่อใช้งาน Export PDF (ไม่จำกัด)"
+            >
+              Upgrade to Export PDF
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ===== Sticky Summary ===== */}
@@ -279,7 +272,7 @@ export default function Dashboard() {
         />
       )}
 
-      {/* ===== ปุ่มกลับไปสั่ง Export PDF (อยู่ล่างสุดใต้ Presenter) ===== */}
+      {/* ===== ปุ่มกลับไปสั่ง Export PDF (ล่างสุด) ===== */}
       <div className="pt-2">
         <div className="mt-4 flex justify-center">
           <button
