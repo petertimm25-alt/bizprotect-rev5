@@ -52,11 +52,14 @@ export default function Pricing() {
     <main className="mx-auto max-w-6xl px-6 py-10">
       {/* Header */}
       <header className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-3 py-1 text-[12px] text-gold ring-1 ring-gold/30">
+        <div className="inline-flex items-center gap-2 rounded-full bg-gold/10 px-2 py-2 text-[12px] text-gold ring-1 ring-gold/30 mb-6">
           แผนราคาสำหรับเอเจนซี่และที่ปรึกษา
         </div>
         <h1 className="mt-3 text-3xl md:text-4xl font-semibold text-[#EBDCA6]">
           จ่ายหลักร้อย เพื่อปิดเบี้ยหลักล้าน
+        </h1>
+        <h1 className="mt-3 text-3xl md:text-4xl font-semibold text-[#EBDCA6]">
+          แบบมืออาชีพ 👍
         </h1>
         <p className="mt-2 text-white/70">
           เลือกแผนที่เหมาะกับทีมของคุณ — อัปเกรด/ดาวน์เกรดได้ตลอดเวลา
