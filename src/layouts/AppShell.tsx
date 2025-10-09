@@ -2,6 +2,7 @@
 import React from 'react'
 import { Outlet } from 'react-router-dom'
 import HeaderNav from '../components/HeaderNav'
+import DebugBar from '../components/DebugBar'
 
 export default function AppShell() {
   return (
