@@ -1,5 +1,5 @@
-// src/pages/Dashboard.tsx
 import React from 'react'
+import ExportPDF from '../components/ExportPDF'
 import { load, save } from '../lib/storage'
 import { initialState } from '../lib/state'
 import type { AppState } from '../lib/types'
@@ -15,46 +15,19 @@ import PITSection from './dashboard/PITSection'
 import ReturnSection from './dashboard/ReturnSection'
 import PresenterSection from './dashboard/PresenterSection'
 
-// 👇 Lazy-load ExportPDF
-const ExportPDFLazy = React.lazy(() => import('../components/ExportPDF'))
-
 const EXPORT_ANCHOR_ID = 'export-anchor'
-
-// ========= Error Boundary (กันพัง) =========
-type ExportBoundaryProps = {
-  fallback: React.ReactNode
-  children?: React.ReactNode
-}
-type ExportBoundaryState = { hasError: boolean }
-
-class ExportBoundary extends React.Component<ExportBoundaryProps, ExportBoundaryState> {
-  constructor(props: ExportBoundaryProps) {
-    super(props)
-    this.state = { hasError: false }
-  }
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-  componentDidCatch(err: any) {
-    console.error('ExportPDF crashed:', err)
-  }
-  render() {
-    if (this.state.hasError) return this.props.fallback
-    return this.props.children as any
-  }
-}
 
 export default function Dashboard() {
   const [data, setData] = React.useState<AppState>(() => load<AppState>(initialState))
   useDebounceEffect(() => save(data), [data], 500)
 
-  // ===== Entitlements (จาก useAuth) =====
   const { user, ent } = useAuth()
   const canExport = !!user && ent.export_pdf
   const limit = ent.directorsMax
   const canEditPresenter = ent.agent_identity_on_pdf
   const canUploadLogo = ent.custom_branding
 
+  // บีบจำนวนผู้บริหารตามแผน
   React.useEffect(() => {
     setData(s => {
       const ds = s.company.directors
@@ -66,23 +39,23 @@ export default function Dashboard() {
     })
   }, [limit])
 
+  // ค่า default presenter
   React.useEffect(() => {
-    setData(s => (s as any).presenter
-      ? s
-      : {
-          ...s,
-          presenter: {
-            name: 'สมคิด',
-            phone: '08x-xxx-xxxx',
-            email: 'somkid@company.com',
-            company: '',
-            licenseNo: '',
-            logoDataUrl: undefined
-          } as any
-        })
+    setData(s => (s as any).presenter ? s : {
+      ...s,
+      presenter: {
+        name: 'สมคิด',
+        phone: '08x-xxx-xxxx',
+        email: 'somkid@company.com',
+        company: '',
+        licenseNo: '',
+        logoDataUrl: undefined
+      } as any
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // ค่า default “แบบประกันฯ แนะนำ”
   React.useEffect(() => {
     setData(s => {
       const cur: any = s
@@ -96,9 +69,10 @@ export default function Dashboard() {
     })
   }, [])
 
-  // ===== Derived =====
+  // ---------- ค่าที่คำนวณ ----------
   const c = data.company
   const ds = c.directors
+
   const income = c.companyIncome ?? 0
   const expense = c.companyExpense ?? 0
   const interest = c.interestExpense ?? 0
@@ -180,67 +154,28 @@ export default function Dashboard() {
     }))
   }
 
-  const go = (id: string) => {
-    const el = document.getElementById(id)
-    if (!el) return
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    if (history.replaceState) history.replaceState(null, '', `#${id}`)
-  }
-
-  const scrollToExport = () => {
-    const el = document.getElementById(EXPORT_ANCHOR_ID)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    else window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
   const recProductName = (data as any).recProductName as string
   const recPayYears   = (data as any).recPayYears as string
   const recCoverage   = (data as any).recCoverage as string
   const setRecFields = (p: Partial<{ recProductName: string; recPayYears: string; recCoverage: string }>) =>
     setData(s => ({ ...(s as any), ...p } as any))
 
+  // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
+  const scrollToExport = () => {
+    const el = document.getElementById(EXPORT_ANCHOR_ID)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-      {/* ===== Header ===== */}
+      {/* ===== Header (เหลือแค่หัวเรื่อง + anchor) ===== */}
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">Keyman Corporate Policy Calculator</h2>
-
-        {/* Anchor สำหรับปุ่มกลับไปสั่ง Export */}
         <span id={EXPORT_ANCHOR_ID} className="block h-0 scroll-mt-24" aria-hidden="true" />
-
-        {canExport ? (
-          <ExportBoundary
-            fallback={
-              <button
-                onClick={() => alert('ไม่สามารถโหลดโมดูล Export ได้ กรุณารีเฟรชหรือใช้เบราว์เซอร์อื่น')}
-                className="rounded-xl px-4 py-2 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold"
-              >
-                Export PDF (โหลดโมดูล…)
-              </button>
-            }
-          >
-            <React.Suspense
-              fallback={
-                <button className="rounded-xl px-4 py-2 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold opacity-80">
-                  กำลังเตรียม Export…
-                </button>
-              }
-            >
-              <ExportPDFLazy state={data} />
-            </React.Suspense>
-          </ExportBoundary>
-        ) : (
-          <button
-            onClick={() => (window.location.href = '/pricing')}
-            className="inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10"
-            title="อัปเกรดเป็น Pro เพื่อใช้งาน Export PDF (ไม่จำกัด)"
-          >
-            Upgrade to Export PDF
-          </button>
-        )}
       </div>
 
-      {/* ===== Sticky Summary ===== */}
+      {/* ===== Sticky Summary + ปุ่ม Export/Upgrade (ย้ายมาไว้ที่นี่) ===== */}
       <StickySummary
         taxYear={taxYear}
         currentThaiYear={currentThaiYear}
@@ -248,6 +183,19 @@ export default function Dashboard() {
         taxSaved_afterPremGross={taxSaved_afterPremGross}
         taxSavedPct_afterPremGross={taxSavedPct_afterPremGross}
         combinedCost={combinedCost}
+        rightSlot={
+          canExport ? (
+            <ExportPDF state={data} />
+          ) : (
+            <button
+              onClick={() => (window.location.href = '/pricing')}
+              className="inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10"
+              title="อัปเกรดเป็น Pro เพื่อใช้งาน Export PDF (ไม่จำกัด)"
+            >
+              Upgrade to Export PDF
+            </button>
+          )
+        }
       />
 
       {/* ===== Company Section ===== */}
@@ -314,18 +262,24 @@ export default function Dashboard() {
         />
       )}
 
-      {/* ===== ปุ่มกลับไปสั่ง Export PDF (อยู่ล่างสุดใต้ Presenter) ===== */}
-      <div className="pt-2">
-        <div className="mt-4 flex justify-center">
+      {/* ===== FAB สำหรับจอเล็ก (ซ้ำกับปุ่มในแถบสติ๊ก) ===== */}
+      <div className="fixed md:hidden right-4 bottom-5 z-40">
+        {canExport ? (
           <button
-            type="button"
             onClick={scrollToExport}
-            className="bp-btn bp-btn-primary font-bold"
-            title="กลับไปด้านบนเพื่อสั่ง Export PDF"
+            className="rounded-full px-4 py-3 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold shadow-lg"
+            title="ไปที่ปุ่ม Export PDF"
           >
-            ↑ กลับไปสั่ง Export PDF
+            Export PDF
           </button>
-        </div>
+        ) : (
+          <button
+            onClick={() => (window.location.href = '/pricing')}
+            className="rounded-full px-4 py-3 bg-white/10 ring-1 ring-gold/40 text-gold font-semibold shadow-lg"
+          >
+            Upgrade
+          </button>
+        )}
       </div>
     </main>
   )

@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-// src/pages/Dashboard.tsx
 import React from 'react';
+import ExportPDF from '../components/ExportPDF';
 import { load, save } from '../lib/storage';
 import { initialState } from '../lib/state';
 import { useDebounceEffect } from '../lib/useDebounceEffect';
@@ -13,35 +13,16 @@ import CITTable from './dashboard/CITTable';
 import PITSection from './dashboard/PITSection';
 import ReturnSection from './dashboard/ReturnSection';
 import PresenterSection from './dashboard/PresenterSection';
-// 👇 Lazy-load ExportPDF
-const ExportPDFLazy = React.lazy(() => import('../components/ExportPDF'));
 const EXPORT_ANCHOR_ID = 'export-anchor';
-class ExportBoundary extends React.Component {
-    constructor(props) {
-        super(props);
-        this.state = { hasError: false };
-    }
-    static getDerivedStateFromError() {
-        return { hasError: true };
-    }
-    componentDidCatch(err) {
-        console.error('ExportPDF crashed:', err);
-    }
-    render() {
-        if (this.state.hasError)
-            return this.props.fallback;
-        return this.props.children;
-    }
-}
 export default function Dashboard() {
     const [data, setData] = React.useState(() => load(initialState));
     useDebounceEffect(() => save(data), [data], 500);
-    // ===== Entitlements (จาก useAuth) =====
     const { user, ent } = useAuth();
     const canExport = !!user && ent.export_pdf;
     const limit = ent.directorsMax;
     const canEditPresenter = ent.agent_identity_on_pdf;
     const canUploadLogo = ent.custom_branding;
+    // บีบจำนวนผู้บริหารตามแผน
     React.useEffect(() => {
         setData(s => {
             const ds = s.company.directors;
@@ -55,22 +36,22 @@ export default function Dashboard() {
             return s;
         });
     }, [limit]);
+    // ค่า default presenter
     React.useEffect(() => {
-        setData(s => s.presenter
-            ? s
-            : {
-                ...s,
-                presenter: {
-                    name: 'สมคิด',
-                    phone: '08x-xxx-xxxx',
-                    email: 'somkid@company.com',
-                    company: '',
-                    licenseNo: '',
-                    logoDataUrl: undefined
-                }
-            });
+        setData(s => s.presenter ? s : {
+            ...s,
+            presenter: {
+                name: 'สมคิด',
+                phone: '08x-xxx-xxxx',
+                email: 'somkid@company.com',
+                company: '',
+                licenseNo: '',
+                logoDataUrl: undefined
+            }
+        });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+    // ค่า default “แบบประกันฯ แนะนำ”
     React.useEffect(() => {
         setData(s => {
             const cur = s;
@@ -84,7 +65,7 @@ export default function Dashboard() {
             };
         });
     }, []);
-    // ===== Derived =====
+    // ---------- ค่าที่คำนวณ ----------
     const c = data.company;
     const ds = c.directors;
     const income = c.companyIncome ?? 0;
@@ -152,14 +133,11 @@ export default function Dashboard() {
             }
         }));
     };
-    const go = (id) => {
-        const el = document.getElementById(id);
-        if (!el)
-            return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        if (history.replaceState)
-            history.replaceState(null, '', `#${id}`);
-    };
+    const recProductName = data.recProductName;
+    const recPayYears = data.recPayYears;
+    const recCoverage = data.recCoverage;
+    const setRecFields = (p) => setData(s => ({ ...s, ...p }));
+    // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
     const scrollToExport = () => {
         const el = document.getElementById(EXPORT_ANCHOR_ID);
         if (el)
@@ -167,9 +145,5 @@ export default function Dashboard() {
         else
             window.scrollTo({ top: 0, behavior: 'smooth' });
     };
-    const recProductName = data.recProductName;
-    const recPayYears = data.recPayYears;
-    const recCoverage = data.recCoverage;
-    const setRecFields = (p) => setData(s => ({ ...s, ...p }));
-    return (_jsxs("main", { className: "mx-auto max-w-6xl px-6 py-10 space-y-8", children: [_jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [_jsx("h2", { className: "text-3xl font-semibold text-[#EBDCA6]", children: "Keyman Corporate Policy Calculator" }), _jsx("span", { id: EXPORT_ANCHOR_ID, className: "block h-0 scroll-mt-24", "aria-hidden": "true" }), canExport ? (_jsx(ExportBoundary, { fallback: _jsx("button", { onClick: () => alert('ไม่สามารถโหลดโมดูล Export ได้ กรุณารีเฟรชหรือใช้เบราว์เซอร์อื่น'), className: "rounded-xl px-4 py-2 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold", children: "Export PDF (\u0E42\u0E2B\u0E25\u0E14\u0E42\u0E21\u0E14\u0E39\u0E25\u2026)" }), children: _jsx(React.Suspense, { fallback: _jsx("button", { className: "rounded-xl px-4 py-2 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold opacity-80", children: "\u0E01\u0E33\u0E25\u0E31\u0E07\u0E40\u0E15\u0E23\u0E35\u0E22\u0E21 Export\u2026" }), children: _jsx(ExportPDFLazy, { state: data }) }) })) : (_jsx("button", { onClick: () => (window.location.href = '/pricing'), className: "inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10", title: "\u0E2D\u0E31\u0E1B\u0E40\u0E01\u0E23\u0E14\u0E40\u0E1B\u0E47\u0E19 Pro \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 Export PDF (\u0E44\u0E21\u0E48\u0E08\u0E33\u0E01\u0E31\u0E14)", children: "Upgrade to Export PDF" }))] }), _jsx(StickySummary, { taxYear: taxYear, currentThaiYear: currentThaiYear, setTaxYear: setTaxYear, taxSaved_afterPremGross: taxSaved_afterPremGross, taxSavedPct_afterPremGross: taxSavedPct_afterPremGross, combinedCost: combinedCost }), _jsx(CompanySection, { company: c, interest: interest, actualCIT: actualCIT, disallow_base: disallow_base, onChange: handleCompanyChange, onClear: handleClearCompany }), _jsx(DirectorsSection, { directors: ds, limit: limit, setData: setData, personalExpense: personalExpense, personalAllowance: personalAllowance, recProductName: recProductName, recPayYears: recPayYears, recCoverage: recCoverage, setRecFields: setRecFields }), _jsx(CITTable, { taxYear: taxYear, income: income, totalPremium: totalPremium, totalGrossUp: totalGrossUp, expense: expense, interest: interest, pbt_before: pbt_before, pbt_afterPrem: pbt_afterPrem, pbt_afterPremGross: pbt_afterPremGross, cit_before: cit_before, cit_afterPrem: cit_afterPrem, cit_afterPremGross: cit_afterPremGross, disallow_base: disallow_base, disallow_afterPrem_display: disallow_afterPrem_display, disallow_afterPremGross_display: disallow_afterPremGross_display, trueTax_before: trueTax_before, CIT_RATE: CIT_RATE }), _jsx(PITSection, { directors: ds, personalExpense: personalExpense, personalAllowance: personalAllowance }), _jsx(ReturnSection, { directors: ds }), canEditPresenter && (_jsx(PresenterSection, { data: data, setData: setData, canUploadLogo: canUploadLogo, handleLogoChange: handleLogoChange })), _jsx("div", { className: "pt-2", children: _jsx("div", { className: "mt-4 flex justify-center", children: _jsx("button", { type: "button", onClick: scrollToExport, className: "bp-btn bp-btn-primary font-bold", title: "\u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E14\u0E49\u0E32\u0E19\u0E1A\u0E19\u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E2A\u0E31\u0E48\u0E07 Export PDF", children: "\u2191 \u0E01\u0E25\u0E31\u0E1A\u0E44\u0E1B\u0E2A\u0E31\u0E48\u0E07 Export PDF" }) }) })] }));
+    return (_jsxs("main", { className: "mx-auto max-w-6xl px-6 py-10 space-y-8", children: [_jsxs("div", { className: "mb-3 flex items-center justify-between gap-3", children: [_jsx("h2", { className: "text-3xl font-semibold text-[#EBDCA6]", children: "Keyman Corporate Policy Calculator" }), _jsx("span", { id: EXPORT_ANCHOR_ID, className: "block h-0 scroll-mt-24", "aria-hidden": "true" })] }), _jsx(StickySummary, { taxYear: taxYear, currentThaiYear: currentThaiYear, setTaxYear: setTaxYear, taxSaved_afterPremGross: taxSaved_afterPremGross, taxSavedPct_afterPremGross: taxSavedPct_afterPremGross, combinedCost: combinedCost, rightSlot: canExport ? (_jsx(ExportPDF, { state: data })) : (_jsx("button", { onClick: () => (window.location.href = '/pricing'), className: "inline-flex items-center gap-2 rounded-lg border border-gold/40 px-4 py-2 text-sm hover:bg-gold/10", title: "\u0E2D\u0E31\u0E1B\u0E40\u0E01\u0E23\u0E14\u0E40\u0E1B\u0E47\u0E19 Pro \u0E40\u0E1E\u0E37\u0E48\u0E2D\u0E43\u0E0A\u0E49\u0E07\u0E32\u0E19 Export PDF (\u0E44\u0E21\u0E48\u0E08\u0E33\u0E01\u0E31\u0E14)", children: "Upgrade to Export PDF" })) }), _jsx(CompanySection, { company: c, interest: interest, actualCIT: actualCIT, disallow_base: disallow_base, onChange: handleCompanyChange, onClear: handleClearCompany }), _jsx(DirectorsSection, { directors: ds, limit: limit, setData: setData, personalExpense: personalExpense, personalAllowance: personalAllowance, recProductName: recProductName, recPayYears: recPayYears, recCoverage: recCoverage, setRecFields: setRecFields }), _jsx(CITTable, { taxYear: taxYear, income: income, totalPremium: totalPremium, totalGrossUp: totalGrossUp, expense: expense, interest: interest, pbt_before: pbt_before, pbt_afterPrem: pbt_afterPrem, pbt_afterPremGross: pbt_afterPremGross, cit_before: cit_before, cit_afterPrem: cit_afterPrem, cit_afterPremGross: cit_afterPremGross, disallow_base: disallow_base, disallow_afterPrem_display: disallow_afterPrem_display, disallow_afterPremGross_display: disallow_afterPremGross_display, trueTax_before: trueTax_before, CIT_RATE: CIT_RATE }), _jsx(PITSection, { directors: ds, personalExpense: personalExpense, personalAllowance: personalAllowance }), _jsx(ReturnSection, { directors: ds }), canEditPresenter && (_jsx(PresenterSection, { data: data, setData: setData, canUploadLogo: canUploadLogo, handleLogoChange: handleLogoChange })), _jsx("div", { className: "fixed md:hidden right-4 bottom-5 z-40", children: canExport ? (_jsx("button", { onClick: scrollToExport, className: "rounded-full px-4 py-3 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold shadow-lg", title: "\u0E44\u0E1B\u0E17\u0E35\u0E48\u0E1B\u0E38\u0E48\u0E21 Export PDF", children: "Export PDF" })) : (_jsx("button", { onClick: () => (window.location.href = '/pricing'), className: "rounded-full px-4 py-3 bg-white/10 ring-1 ring-gold/40 text-gold font-semibold shadow-lg", children: "Upgrade" })) })] }));
 }
