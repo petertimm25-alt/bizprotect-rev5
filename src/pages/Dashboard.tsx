@@ -165,16 +165,16 @@ export default function Dashboard() {
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
-      {/* ===== Header (แก้เลย์เอาต์ให้ไม่บีบปุ่ม) ===== */}
+      {/* ===== Header (desktop/แท็บเล็ต) ===== */}
       <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_auto] items-start">
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">
           Keyman Corporate Policy Calculator
         </h2>
 
-        {/* Anchor สำหรับเลื่อนกลับขึ้นมาที่ปุ่ม */}
+        {/* Anchor สำหรับเลื่อนไปปุ่ม */}
         <span id={EXPORT_ANCHOR_ID} className="block h-0 scroll-mt-24" aria-hidden="true" />
 
-        <div className="justify-self-end shrink-0">
+        <div className="justify-self-end hidden sm:block shrink-0">
           {canExport ? (
             <ExportPDF state={data} />
           ) : (
@@ -187,17 +187,9 @@ export default function Dashboard() {
             </button>
           )}
         </div>
-
-        {/* ปุ่มสำรองสำหรับมือถือ (แสดงเฉพาะจอเล็ก) */}
-        {canExport && (
-          <div className="sm:hidden col-span-full">
-            <div className="shrink-0">
-              <ExportPDF state={data} />
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* ===== Sticky Summary ===== */}
       <StickySummary
         taxYear={taxYear}
         currentThaiYear={currentThaiYear}
@@ -207,6 +199,7 @@ export default function Dashboard() {
         combinedCost={combinedCost}
       />
 
+      {/* ===== Sections ===== */}
       <CompanySection
         company={c}
         interest={interest}
@@ -265,6 +258,7 @@ export default function Dashboard() {
         />
       )}
 
+      {/* ===== ปุ่มกลับไปบนสุด ===== */}
       <div className="pt-2">
         <div className="mt-4 flex justify-center">
           <button
@@ -276,6 +270,23 @@ export default function Dashboard() {
             ↑ กลับไปสั่ง Export PDF
           </button>
         </div>
+      </div>
+
+      {/* ===== FAB บนมือถือ (มุมขวาล่าง) ===== */}
+      <div className="sm:hidden fixed right-4 bottom-20 z-50">
+        {canExport ? (
+          <div className="shadow-lg rounded-full overflow-hidden">
+            <ExportPDF state={data} />
+          </div>
+        ) : (
+          <button
+            onClick={() => (window.location.href = '/pricing')}
+            className="rounded-full px-5 py-3 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold shadow-lg"
+            title="อัปเกรดเพื่อ Export PDF"
+          >
+            Upgrade
+          </button>
+        )}
       </div>
     </main>
   )
