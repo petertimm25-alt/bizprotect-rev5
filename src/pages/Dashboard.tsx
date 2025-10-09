@@ -23,8 +23,9 @@ export default function Dashboard() {
   useDebounceEffect(() => save(data), [data], 500)
 
   // ===== Entitlements (จาก useAuth) =====
-  const { user, ent } = useAuth()
-  const canExport = !!user && ent.export_pdf            // free = false, pro/ultra = true
+  const { user, ent, plan } = useAuth() as any
+  // กันพลาดชั่วคราว: เปิดปุ่มให้ PRO/ULTRA แน่ๆ แม้ ent จะยังโหลดไม่ทัน
+  const canExport = !!user && (ent.export_pdf || plan === 'pro' || plan === 'ultra')
   const limit = ent.directorsMax
   const canEditPresenter = ent.agent_identity_on_pdf
   const canUploadLogo = ent.custom_branding
