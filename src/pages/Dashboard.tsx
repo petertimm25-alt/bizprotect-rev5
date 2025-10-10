@@ -1,6 +1,5 @@
 // src/pages/Dashboard.tsx
 import React from 'react'
-import ExportPDF from '../components/ExportPDF'
 import { load, save } from '../lib/storage'
 import { initialState } from '../lib/state'
 import type { AppState } from '../lib/types'
@@ -16,20 +15,55 @@ import PITSection from './dashboard/PITSection'
 import ReturnSection from './dashboard/ReturnSection'
 import PresenterSection from './dashboard/PresenterSection'
 
+// ===== Lazy import + Preload =====
+const ExportPDFLazy = React.lazy(() => import('../components/ExportPDF'))
+
 const EXPORT_ANCHOR_ID = 'export-anchor'
+
+function ExportFallbackButton() {
+  return (
+    <button
+      disabled
+      className="rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)]/80 text-[#0B1B2B] font-semibold"
+      title="กำลังโหลดโมดูล Export…"
+    >
+      กำลังโหลด…
+    </button>
+  )
+}
 
 export default function Dashboard() {
   const [data, setData] = React.useState<AppState>(() => load<AppState>(initialState))
   useDebounceEffect(() => save(data), [data], 500)
 
-  // ===== Entitlements (จาก useAuth) =====
-  const { user, ent } = useAuth()
-  const canExport = !!user && ent.export_pdf            // free = false, pro/ultra = true
+  // ===== Auth / Entitlements =====
+  const { ent, loading } = useAuth()
+
+  // 1) mount guard — รอให้ React mount ก่อนค่อย render ปุ่ม
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => { setMounted(true) }, [])
+
+  // 2) debounce สิทธิ์ export ให้ “นิ่ง” สักแป๊บกันกระพริบ
+  const [canExportDebounced, setCanExportDebounced] = React.useState(false)
+  React.useEffect(() => {
+    const t = setTimeout(() => setCanExportDebounced(ent.export_pdf), 250)
+    return () => clearTimeout(t)
+  }, [ent.export_pdf])
+
+  // 3) พรีโหลดโมดูลเมื่อพร้อม
+  React.useEffect(() => {
+    if (!mounted || !canExportDebounced || loading) return
+    const idle = (window as any).requestIdleCallback || ((fn: any) => setTimeout(fn, 120))
+    const cancel = (window as any).cancelIdleCallback || clearTimeout
+    const id = idle(() => import('../components/ExportPDF').catch(() => {}))
+    return () => cancel(id)
+  }, [mounted, canExportDebounced, loading])
+
   const limit = ent.directorsMax
   const canEditPresenter = ent.agent_identity_on_pdf
   const canUploadLogo = ent.custom_branding
 
-  // Trim directors if exceeds plan limit
+  // ===== Business data =====
   React.useEffect(() => {
     setData(s => {
       const ds = s.company.directors
@@ -41,25 +75,21 @@ export default function Dashboard() {
     })
   }, [limit])
 
-  // Ensure presenter defaults once
   React.useEffect(() => {
-    setData(s => (s as any).presenter
-      ? s
-      : {
-          ...s,
-          presenter: {
-            name: 'สมคิด',
-            phone: '08x-xxx-xxxx',
-            email: 'somkid@company.com',
-            company: '',
-            licenseNo: '',
-            logoDataUrl: undefined
-          } as any
-        })
+    setData(s => (s as any).presenter ? s : ({
+      ...s,
+      presenter: {
+        name: 'สมคิด',
+        phone: '08x-xxx-xxxx',
+        email: 'somkid@company.com',
+        company: '',
+        licenseNo: '',
+        logoDataUrl: undefined
+      } as any
+    }))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ===== default “แบบประกันฯ แนะนำ” 3 ฟิลด์ (string) =====
   React.useEffect(() => {
     setData(s => {
       const cur: any = s
@@ -73,17 +103,14 @@ export default function Dashboard() {
     })
   }, [])
 
-  // ------------- Shortcuts / derived -------------
   const c = data.company
   const ds = c.directors
-
   const income = c.companyIncome ?? 0
   const expense = c.companyExpense ?? 0
   const interest = c.interestExpense ?? 0
   const actualCIT = c.actualCIT ?? 0
   const currentThaiYear = new Date().getFullYear() + 543
   const taxYear: number | undefined = c.taxYear
-
   const personalExpense = 100000
   const personalAllowance = 160000
 
@@ -158,7 +185,6 @@ export default function Dashboard() {
     }))
   }
 
-  // helper: scroll ไปยัง element ตาม id แล้วอัปเดต hash โดยไม่เปลี่ยนหน้า
   const go = (id: string) => {
     const el = document.getElementById(id)
     if (!el) return
@@ -166,14 +192,10 @@ export default function Dashboard() {
     if (history.replaceState) history.replaceState(null, '', `#${id}`)
   }
 
-  // ปุ่มลัดกลับไปบนสุด (ไปที่ Export)
   const scrollToExport = () => {
     const el = document.getElementById(EXPORT_ANCHOR_ID)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const recProductName = (data as any).recProductName as string
@@ -188,11 +210,18 @@ export default function Dashboard() {
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-3xl font-semibold text-[#EBDCA6]">Keyman Corporate Policy Calculator</h2>
 
-        {/* Anchor สำหรับปุ่มกลับไปสั่ง Export */}
         <span id={EXPORT_ANCHOR_ID} className="block h-0 scroll-mt-24" aria-hidden="true" />
 
-        {canExport ? (
-          <ExportPDF state={data} />
+        {/* ปุ่มด้านขวา — แสดงหลัง mount + debounce แล้วเท่านั้น */}
+        {!mounted ? (
+          <ExportFallbackButton />
+        ) : loading ? (
+          <ExportFallbackButton />
+        ) : canExportDebounced ? (
+          <React.Suspense fallback={<ExportFallbackButton />}>
+            {/* key บังคับ remount เมื่อสิทธิ์เปลี่ยน */}
+            <ExportPDFLazy key={`export:${String(canExportDebounced)}`} state={data} />
+          </React.Suspense>
         ) : (
           <button
             onClick={() => (window.location.href = '/pricing')}
