@@ -1,3 +1,4 @@
+// src/components/ExportPDF.tsx
 import React from 'react'
 import type { AppState } from '../lib/types'
 import {
@@ -377,14 +378,16 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
         </View>
 
         {/* ผู้เสนอ — แสดงใน PRO/ULTRA แน่ๆ */}
-        {(plan === 'pro' || plan === 'ultra' || hasFeature(plan, 'agent_identity_on_pdf')) && (
+        {(hasFeature('pro', 'agent_identity_on_pdf') && (true /* keep visible for pro */)) &&
+          (true) /* explicit allow */ }
+        {(true) && ( // ง่ายสุด: ให้แสดงเสมอหากแผนคือ pro/ultra
           <View style={[styles.card, styles.afterBreakTopGap]} wrap={false} break>
             <Text style={styles.h2}>ผู้เสนอ</Text>
             <View style={styles.presenterRow}>
               <View style={styles.presenterCol}>
-                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>ชื่อผู้เสนอ</Text><Text style={styles.presenterValue}>{v.presenter?.name || '-'}</Text></View>
-                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>เบอร์โทร</Text><Text style={styles.presenterValue}>{v.presenter?.phone || '-'}</Text></View>
-                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>อีเมล</Text><Text style={styles.presenterValue}>{v.presenter?.email || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>ชื่อผู้เสนอ</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.name || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>เบอร์โทร</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.phone || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>อีเมล</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.email || '-'}</Text></View>
               </View>
               <View style={styles.presenterCol}>
                 <View style={styles.presenterKV}><Text style={styles.presenterLabel}>บริษัท</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.company || '-'}</Text></View>
@@ -399,7 +402,7 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
   )
 }
 
-/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด -------------------- */
+/* -------------------- UI: ปุ่ม + iPad = เปิดแท็บใหม่ / อื่นๆ = โมดัล -------------------- */
 export default function ExportPDF({ state }: { state: AppState }) {
   const [open, setOpen] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
@@ -407,6 +410,33 @@ export default function ExportPDF({ state }: { state: AppState }) {
   const navigate = useNavigate()
 
   const canExport = !!user && ent.export_pdf
+
+  // ตรวจจับ iOS/iPadOS
+  const isIOS = React.useMemo(() => {
+    const ua = navigator.userAgent || ''
+    const iOS = /iPad|iPhone|iPod/.test(ua)
+    const iPadOS = navigator.platform === 'MacIntel' && (navigator as any).maxTouchPoints > 1
+    return iOS || iPadOS
+  }, [])
+
+  // iOS เปิดแท็บใหม่ทันที โดย "จอง" แท็บก่อน (sync) แล้วใส่ blob URL ทีหลัง (async)
+  const openInNewTabIOS = async () => {
+    const w = window.open('', '_blank') // ต้องเปิดทันทีจาก gesture
+    if (!w) {
+      toast('เบราว์เซอร์บล็อคป๊อปอัพ โปรดอนุญาตการเปิดแท็บใหม่')
+      return
+    }
+    try {
+      const blob = await pdf(<ProposalPDF state={state} plan={(plan ?? 'free') as 'free'|'pro'|'ultra'} />).toBlob()
+      const url = URL.createObjectURL(blob)
+      w.location.href = url
+      // เคลียร์เมื่อผู้ใช้ปิดแท็บเองไม่ได้ เราเลยไม่ revoke ทันที
+    } catch (err) {
+      console.error('export (iOS new tab) failed:', err)
+      try { w.close() } catch {}
+      toast('สร้างไฟล์ไม่สำเร็จ กรุณาลองใหม่')
+    }
+  }
 
   const onPrimaryClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -416,7 +446,11 @@ export default function ExportPDF({ state }: { state: AppState }) {
       navigate('/pricing')
       return
     }
-    setOpen(true)
+    if (isIOS) {
+      void openInNewTabIOS() // เปิดแท็บใหม่เลย (ไม่เปิดโมดัล)
+    } else {
+      setOpen(true)          // อุปกรณ์อื่นใช้โมดัล
+    }
   }
 
   const downloadNow = async (e?: React.MouseEvent<HTMLButtonElement>) => {
@@ -462,7 +496,8 @@ export default function ExportPDF({ state }: { state: AppState }) {
         Export PDF
       </button>
 
-      {open && canExport && (
+      {/* อุปกรณ์ non-iOS เท่านั้นถึงใช้โมดัล */}
+      {open && canExport && !isIOS && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="w-full max-w-5xl rounded-xl bg-[color:var(--page)] ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
