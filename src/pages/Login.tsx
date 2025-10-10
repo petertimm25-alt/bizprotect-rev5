@@ -1,6 +1,8 @@
+// src/pages/Login.tsx
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import logoUrl from "/brand/BizProtectLogo.png"; // ✅ Vite will resolve the correct public path
 
 function Spinner() {
   return (
@@ -42,7 +44,7 @@ export default function Login() {
       {/* โลโก้ + แบรนด์ */}
       <div className="flex flex-col items-center mb-6">
         <img
-          src="public/brand/BizProtectLogo.png"
+          src={logoUrl}
           alt="BizProtect"
           className="h-20 w-20 rounded-full border border-white/15 shadow mb-3"
         />
