@@ -1,62 +1,74 @@
 // src/lib/device.ts
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { supabase } from './auth'
 
-/** สร้าง seed คงที่ต่อเบราว์เซอร์ (ครั้งแรกสุ่ม แล้วเก็บไว้ใน localStorage) */
-function getSeed(): string {
-  let s = localStorage.getItem('bp:seed')
-  if (!s) {
-    s = crypto?.randomUUID?.() || String(Math.random())
-    localStorage.setItem('bp:seed', s)
-  }
-  return s
+const DEVKEY = 'bp:device_id'
+
+/** บังคับให้ได้ Supabase client ที่ไม่ null (ถ้าไม่พร้อมจะ throw) */
+function requireSupabase(): NonNullable<typeof supabase> {
+  if (!supabase) throw new Error('Supabase is not configured')
+  return supabase
 }
 
-/** แฮชง่าย ๆ ให้ได้ string คงที่ต่อเบราว์เซอร์/เครื่อง */
-export function getDeviceHash(): string {
-  const raw = [
-    navigator.userAgent,
-    navigator.language,
-    navigator.platform,
-    Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-    getSeed(),
-  ].join('|')
-
-  let h = 0
-  for (let i = 0; i < raw.length; i++) {
-    h = (h << 5) - h + raw.charCodeAt(i)
-    h |= 0
+export function getDeviceId(): string {
+  if (typeof window === 'undefined') return 'ssr'
+  let id = localStorage.getItem(DEVKEY)
+  if (!id) {
+    id = (crypto?.randomUUID?.() || String(Math.random())).toString()
+    localStorage.setItem(DEVKEY, id)
   }
-  return String(h)
+  return id
 }
 
-/** เรียก Edge Function เพื่อลงทะเบียนอุปกรณ์นี้ */
-export async function registerDevice(
-  supabase: SupabaseClient
-): Promise<{ ok: boolean; reason?: string }> {
-  const { data: { session } } = await supabase.auth.getSession()
-  const token = session?.access_token
-  if (!token) return { ok: false, reason: 'no-session' }
+export function getDeviceName(): string {
+  if (typeof navigator === 'undefined') return 'unknown'
+  const p = (navigator as any).platform || ''
+  const v = (navigator as any).vendor || ''
+  return [p, v].filter(Boolean).join(' · ')
+}
 
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register_device`
-  const payload = {
-    device_hash: getDeviceHash(),
-    user_agent: navigator.userAgent,
+/** ลงทะเบียน/อัปเดตอุปกรณ์ และบังคับให้เหลือแค่ 1 ตัว (หรือ N ถ้าส่งค่าเข้ามา) */
+export async function registerDevice(maxDevices = 1): Promise<void> {
+  const sb = requireSupabase()
+  const device_id = getDeviceId()
+  const device_name = getDeviceName()
+  const user_agent = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown'
+  await sb.rpc('upsert_device', {
+    p_device_id: device_id,
+    p_device_name: device_name,
+    p_user_agent: user_agent,
+    p_max_devices: maxDevices,
+  })
+}
+
+/** heart-beat: อัปเดต last_seen */
+export async function touchDevice(): Promise<void> {
+  const sb = requireSupabase()
+  const device_id = getDeviceId()
+  await sb.rpc('touch_device', { p_device_id: device_id })
+}
+
+/** subscribe เมื่อ device ถูก revoke → caller ควร signOut() */
+export function subscribeDeviceRevocation(onRevoked: () => void) {
+  if (!supabase) {
+    return { unsubscribe() {} }
   }
+  const sb = requireSupabase()
+  const device_id = getDeviceId()
+  const ch = sb
+    .channel('dev_' + device_id)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` },
+      (payload: any) => {
+        const row = payload.new || {}
+        if (row.revoked) onRevoked()
+      }
+    )
+    .subscribe()
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  }).catch(() => null)
-
-  if (!res) return { ok: false, reason: 'network' }
-
-  let json: any = null
-  try { json = await res.json() } catch {}
-  if (!res.ok) return { ok: false, reason: json?.reason || `http-${res.status}` }
-
-  return json?.ok ? { ok: true } : { ok: false, reason: json?.reason || 'unknown' }
+  return {
+    unsubscribe() {
+      try { sb.removeChannel(ch) } catch {}
+    }
+  }
 }
