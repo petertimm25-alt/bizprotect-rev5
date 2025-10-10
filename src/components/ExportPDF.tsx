@@ -375,6 +375,28 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
           </View>
 
           <Text style={styles.note}>* ตัวอย่างที่แสดงคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จากแอปฯ AZD</Text>
+          {/* ตารางภาพรวมทุน & เบี้ย (ผู้บริหารทุกท่าน) */}
+          {chunkRows(fundRows, fundRows.length >= 7 ? 6 : 6, 18).map((rows, pageIdx) => (
+            <View
+              key={`fund-page-${pageIdx}`}
+              style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table}
+              break={pageIdx > 0}
+              wrap={false}
+            >
+              <HeaderRow headers={[
+                'ผู้บริหาร',
+                'ทุนประกันชีวิต',
+                'เบี้ย/ปี',
+                'เบี้ยสะสม ปีที่ 7',
+                '**กรมฯ ปีที่ 7',
+                '**อายุ 60 ปี',
+                '**อายุ 70 ปี',
+                '**อายุ 99 ปี'
+              ]} />
+              <BodyRows rows={rows} />
+            </View>
+          ))}
+
         </View>
 
         {/* ผู้เสนอ — แสดงใน PRO/ULTRA แน่ๆ */}
