@@ -12,12 +12,12 @@ export default function AuthCallback() {
                     throw new Error('Supabase is not ready');
                 const hash = window.location.hash;
                 if (!hash || (!hash.includes('access_token') && !hash.includes('code'))) {
-                    // กรณีเปิดจากอีเมลบนอุปกรณ์บางชนิด ลิงก์อาจมาแบบ query
+                    // บางอุปกรณ์ส่งเป็น query ?code=
                     const qs = new URLSearchParams(window.location.search);
                     if (!qs.get('code'))
                         throw new Error('ลิงก์ไม่ถูกต้อง: ไม่พบ code หรือ token');
                 }
-                // Supabase JS v2 จะ handle เองผ่าน listener → แค่รอสักครู่แล้วเปลี่ยนหน้า
+                // Supabase JS จะ sync session เอง → รอสั้นๆ แล้วนำทาง
                 setTimeout(() => {
                     const state = loc.state || {};
                     const to = state.from || '/dashboard';
