@@ -1,14 +1,13 @@
-// src/components/ExportPDF.tsx
 import React from 'react'
 import type { AppState } from '../lib/types'
 import {
-  Document, Page, Text, View, StyleSheet, Font, pdf, Link, BlobProvider, Image,
+  Document, Page, Text, View, StyleSheet, Font, pdf, BlobProvider, Image,
 } from '@react-pdf/renderer'
 import { pitTax, marginalRate, progressiveGrossUp } from '../lib/tax'
-import { RULINGS } from '../data/rulings'
 import { useAuth } from '../lib/auth'
 import { hasFeature } from '../lib/roles'
 import { toast } from '../lib/toast'
+import { useNavigate } from 'react-router-dom'
 
 /* -------------------- Safe asset resolver -------------------- */
 function getBaseUrl(): string {
@@ -103,7 +102,7 @@ const styles = StyleSheet.create({
   presenterRow: { flexDirection: 'row', gap: 8 },
   presenterCol: { flex: 1 },
   presenterKV: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 2 },
-  presenterLabel: { color: THEME.inkDim, minWidth: 90 },
+  presenterLabel: { color: THEME.inkDim, minWidth: 100 },
   presenterValue: { flex: 1, textAlign: 'left' },
   planBox: { ...border, borderWidth: 1, borderRadius: 6, padding: 8, backgroundColor: '#FFFFFF', marginTop: 6, marginBottom: 6 },
   planTitle: { fontSize: 10, fontWeight: 600, color: THEME.ink, marginBottom: 2 },
@@ -187,7 +186,10 @@ function buildComputed(state: AppState) {
   const taxSavedPct_afterPrem = trueTax_before > 0 ? (taxSaved_afterPrem / trueTax_before) * 100 : 0
   const taxSavedPct_afterPremGross = trueTax_before > 0 ? (taxSaved_afterPremGross / trueTax_before) * 100 : 0
 
-  const presenter = (state as any)?.presenter || { name: '', phone: '', email: '', company: '', licenseNo: '', logoDataUrl: undefined }
+  // รวม presenter (รองรับ agentCode ใหม่)
+  const presenter = (state as any)?.presenter || {
+    name: '', phone: '', email: '', company: '', licenseNo: '', agentCode: '', logoDataUrl: undefined
+  }
 
   return {
     c, ds, gus,
@@ -239,23 +241,6 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
     cells: [ g.name || '-', fmt(g.base), fmt(g.pit1), fmt(g.pit3), fmt(g.g), fmt(g.net1), fmt(g.net3), fmt((g as any).sumAssured ?? 0) ],
   }))
 
-  const fundRows = v.gus.map(g => {
-    const accum7 = (g as any).prem ? ((g as any).prem as number) * 7 : 0
-    return {
-      key: g.id,
-      cells: [
-        g.name || '-',
-        fmt((g as any).sumAssured ?? 0),
-        fmt((g as any).prem ?? 0),
-        fmt(accum7),
-        fmt((g as any).surrenderY7),
-        fmt((g as any).surrenderAge60),
-        fmt((g as any).surrenderAge70),
-        fmt((g as any).surrenderAge99),
-      ],
-    }
-  })
-
   const HeaderRow = ({ headers }: { headers: string[] }) => (
     <View style={styles.tr}>
       {headers.map((h, i) => (
@@ -276,6 +261,23 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
     </>
   )
 
+  const fundRows = v.gus.map(g => {
+    const accum7 = (g as any).prem ? ((g as any).prem as number) * 7 : 0
+    return {
+      key: g.id,
+      cells: [
+        g.name || '-',
+        fmt((g as any).sumAssured ?? 0),
+        fmt((g as any).prem ?? 0),
+        fmt(accum7),
+        fmt((g as any).surrenderY7),
+        fmt((g as any).surrenderAge60),
+        fmt((g as any).surrenderAge70),
+        fmt((g as any).surrenderAge99),
+      ],
+    }
+  })
+
   return (
     <Document>
       {/* PAGE 1 */}
@@ -288,10 +290,10 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
         <View style={styles.card}>
           <Text style={styles.h2}>ข้อมูลบริษัท</Text>
           <View style={styles.row}><Text style={styles.label}>ชื่อบริษัท</Text><Text style={styles.value}>{v.c.name || '-'}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (งบจริง))</Text><Text style={styles.value}>{fmt(v.pbt_before)}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (งบจริง)</Text><Text style={styles.value}>{fmt(v.pbt_before)}</Text></View>
           <View style={styles.row}><Text style={styles.label}>ภาษี (งบจริง)</Text><Text style={styles.value}>{fmt(v.trueTax_before)}</Text></View>
           <View style={styles.row}><Text style={[styles.label, { color: 'red' }]}>ค่าบวกกลับ (คาดคะเนจากงบจริง)</Text><Text style={[styles.value,{color: 'red'}]}>{fmt(v.disallow_base)}</Text></View>
-          <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (หลังเข้าร่วมโครงการฯ: เบี้ย + ภาษีออกแทน))</Text><Text style={[styles.value, styles.gold]}>{fmt(v.pbt_afterPremGross)}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>กำไรก่อนภาษี (หลังเข้าร่วมโครงการฯ: เบี้ย + ภาษีออกแทน)</Text><Text style={[styles.value, styles.gold]}>{fmt(v.pbt_afterPremGross)}</Text></View>
           <View style={styles.row}><Text style={styles.label}>ภาษี (หลังเข้าร่วมโครงการฯ: เบี้ย + ภาษีออกแทน)</Text><Text style={[styles.value, styles.gold]}>{fmt(v.trueTax_afterPremGross)}</Text></View>
           <View style={styles.row}><Text style={[styles.label, {fontWeight: 700}]}>ภาษีลดลง (หลังเข้าร่วมโครงการฯ)</Text><Text style={[styles.value, styles.gold]}>{fmt(v.taxSaved_afterPremGross)} ({v.taxSavedPct_afterPremGross.toFixed(2)}%)</Text></View>
         </View>
@@ -319,7 +321,7 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
             ['เบี้ยประกันฯกรมธรรม์นิติบุคคล (บาท/ปี)', 0, -v.totalPremium, -v.totalPremium],
             ['ค่าภาษีออกแทนทุกทอด (ภ.ง.ด.50(1)) (บาท/ปี)', 0, 0, -v.totalGrossUp],
             ['รายจ่ายรวม/ดอกเบี้ยจ่าย (บาท/ปี)', -(v.expense + v.interest), -(v.expense + v.interest), -(v.expense + v.interest)],
-            ['กำไรก่อนภาษี (บาท/ปี))', v.pbt_before, v.pbt_afterPrem, v.pbt_afterPremGross],
+            ['กำไรก่อนภาษี (บาท/ปี)', v.pbt_before, v.pbt_afterPrem, v.pbt_afterPremGross],
             ['ภาษีเงินได้ที่เสียจริง (บาท/ปี)', -v.trueTax_before, -v.trueTax_afterPrem, -v.trueTax_afterPremGross],
           ].map((r, i) => (
             <View key={i} style={styles.tr}>
@@ -347,7 +349,7 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
 
       {/* PAGE 2+ */}
       <PageWithBrand showWatermark={showWatermark} brandLogo={brandLogo}>
-        {/* ตารางผู้บริหาร (ผลกระทบภาษีรายบุคคล) */}
+        {/* ตารางผู้บริหาร */}
         <Text style={styles.h2}>ตารางผู้บริหาร (ผลกระทบภาษีรายบุคคล)</Text>
         {chunkRows(directorRows, 10, 18).map((rows, pageIdx) => (
           <View key={`dir-page-${pageIdx}`} style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table} break={pageIdx > 0}>
@@ -371,20 +373,11 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
             <Text style={styles.planText}>คุ้มครองถึงอายุ 99 ปี</Text>
           </View>
 
-          <Text style={styles.note}>** มูลค่ารับซื้อคืนหน่วยลงทุนในช่วงเวลาต่างๆ</Text>
-
-          {chunkRows(fundRows, fundRows.length >= 7 ? 6 : 6, 18).map((rows, pageIdx) => (
-            <View key={`fund-page-${pageIdx}`} style={pageIdx > 0 ? [styles.table, styles.afterBreakTopGap] : styles.table} break={pageIdx > 0} wrap={false}>
-              <HeaderRow headers={['ผู้บริหาร','ทุนประกันชีวิต','เบี้ย/ปี','เบี้ยสะสม ปีที่ 7','**กรมฯ ปีที่ 7','**อายุ 60 ปี','**อายุ 70 ปี','**อายุ 99 ปี']} />
-              <BodyRows rows={rows} />
-            </View>
-          ))}
-
-          <Text style={styles.note}>* ตัวอย่างที่แสดงข้างต้นคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จาก แอปพลิเคชั่น AZD</Text>
+          <Text style={styles.note}>* ตัวอย่างที่แสดงคำนวณจากอัตราผลตอบแทนสมมติโดยเฉลี่ยต่อปี 5% จากแอปฯ AZD</Text>
         </View>
 
-        {/* ผู้เสนอ — Pro/Ultra เท่านั้น */}
-        {hasFeature(plan, 'agent_identity_on_pdf') && (
+        {/* ผู้เสนอ — แสดงใน PRO/ULTRA แน่ๆ */}
+        {(plan === 'pro' || plan === 'ultra' || hasFeature(plan, 'agent_identity_on_pdf')) && (
           <View style={[styles.card, styles.afterBreakTopGap]} wrap={false} break>
             <Text style={styles.h2}>ผู้เสนอ</Text>
             <View style={styles.presenterRow}>
@@ -396,6 +389,7 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
               <View style={styles.presenterCol}>
                 <View style={styles.presenterKV}><Text style={styles.presenterLabel}>บริษัท</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.company || '-'}</Text></View>
                 <View style={styles.presenterKV}><Text style={styles.presenterLabel}>เลขที่ใบอนุญาต</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.licenseNo || '-'}</Text></View>
+                <View style={styles.presenterKV}><Text style={styles.presenterLabel}>รหัสตัวแทน</Text><Text style={styles.presenterValue}>{(v.presenter as any)?.agentCode || '-'}</Text></View>
               </View>
             </View>
           </View>
@@ -405,34 +399,52 @@ function ProposalPDF({ state, plan }: { state: AppState; plan: 'free' | 'pro' | 
   )
 }
 
-/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด (ไม่มีโควต้า) -------------------- */
+/* -------------------- UI: ปุ่ม + พรีวิว + ดาวน์โหลด -------------------- */
 export default function ExportPDF({ state }: { state: AppState }) {
   const [open, setOpen] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
-  const { user } = useAuth()
-  const plan = (user?.plan ?? 'free') as 'free' | 'pro' | 'ultra'
+  const { user, ent, plan } = useAuth()
+  const navigate = useNavigate()
 
-  // ถ้าแผนไม่มีสิทธิ์ export ให้ไม่เรนเดอร์ปุ่มเลย (กันพลาด)
-  if (!hasFeature(plan, 'export_pdf')) return null
+  const canExport = !!user && ent.export_pdf
 
-  const downloadNow = async () => {
-    if (!user) {
-      toast('กรุณาเข้าสู่ระบบเพื่อดาวน์โหลดเอกสาร')
+  const onPrimaryClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!canExport) {
+      try { toast('ฟีเจอร์ Export PDF ใช้ได้ในแผน PRO/ULTRA กรุณาอัปเกรด') } catch {}
+      navigate('/pricing')
+      return
+    }
+    setOpen(true)
+  }
+
+  const downloadNow = async (e?: React.MouseEvent<HTMLButtonElement>) => {
+    e?.preventDefault()
+    e?.stopPropagation()
+    if (!canExport) {
+      try { toast('ฟีเจอร์ Export PDF ใช้ได้ในแผน PRO/ULTRA กรุณาอัปเกรด') } catch {}
+      navigate('/pricing')
       return
     }
     if (busy) return
     setBusy(true)
     try {
-      const blob = await pdf(<ProposalPDF state={state} plan={plan} />).toBlob()
+      const blob = await pdf(<ProposalPDF state={state} plan={(plan ?? 'free') as 'free'|'pro'|'ultra'} />).toBlob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
+      a.style.display = 'none'
       a.href = url
       a.download = 'BizProtect-Proposal.pdf'
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      setTimeout(() => {
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }, 0)
       toast('ดาวน์โหลดแล้ว')
-    } catch (e) {
-      console.error('export failed:', e)
+    } catch (err) {
+      console.error('export failed:', err)
       toast('สร้างไฟล์ไม่สำเร็จ กรุณาลองใหม่')
     } finally {
       setBusy(false)
@@ -442,32 +454,40 @@ export default function ExportPDF({ state }: { state: AppState }) {
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        type="button"
+        onClick={onPrimaryClick}
         className="rounded-xl px-4 py-2 md:h-12 bg-[var(--brand-accent)] text-[#0B1B2B] font-semibold hover:brightness-95"
-        title="ดูตัวอย่างแล้วดาวน์โหลด"
+        title="Export PDF"
       >
         Export PDF
       </button>
 
-      {open && (
+      {open && canExport && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
           <div className="w-full max-w-5xl rounded-xl bg-[color:var(--page)] ring-1 ring-white/10 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
               <div className="text-sm text-[color:var(--ink-dim)]">ตัวอย่างเอกสาร (Preview)</div>
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
                   onClick={downloadNow}
                   disabled={busy}
                   className="text-xs px-3 py-1 rounded ring-1 ring-gold/50 hover:bg-gold/10 disabled:opacity-50"
                 >
                   {busy ? 'กำลังสร้าง…' : 'ดาวน์โหลด'}
                 </button>
-                <button onClick={() => setOpen(false)} className="text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10">ปิด</button>
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-xs px-3 py-1 rounded ring-1 ring-white/20 hover:bg-white/10"
+                >
+                  ปิด
+                </button>
               </div>
             </div>
 
             <div className="h-[80vh] bg-black/10">
-              <BlobProvider document={<ProposalPDF state={state} plan={plan} />}>
+              <BlobProvider document={<ProposalPDF state={state} plan={(plan ?? 'free') as 'free'|'pro'|'ultra'} />}>
                 {({ url, loading, error }) => {
                   if (loading) return <div className="p-6 text-center text-sm">กำลังสร้างตัวอย่าง…</div>
                   if (error) {
