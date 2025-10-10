@@ -1,4 +1,3 @@
-// src/lib/auth.tsx
 import React, { createContext, useContext } from 'react'
 import { createClient, type User } from '@supabase/supabase-js'
 import { type Plan, hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles'
@@ -12,7 +11,7 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null
 
-// ---------- Plan override helpers (DevTools-like butอัตโนมัติ) ----------
+// ---------- Plan override helpers (DevTools-like but อัตโนมัติ) ----------
 const OV_KEY = 'bp:plan'
 
 // ใช้ค่า override ถ้ามี (เหมือนคุณ set ผ่าน DevTools)
@@ -22,7 +21,7 @@ const readPlanOverride = (): Plan | null => {
   return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
 }
 
-// เขียน mirror ลง localStorage อัตโนมัติ: pro/ultra → set, free → remove
+// เขียน mirror ลง localStorage อัตโนมัติ: pro/ultra → set, free/ไม่มี → remove
 const writePlanOverride = (p: Plan | null | undefined) => {
   try {
     if (p === 'pro' || p === 'ultra') localStorage.setItem(OV_KEY, p)
@@ -115,7 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         void fetchProfilePlan(session.user.id).then(p => {
           if (p) {
             setProfilePlan(p)
-            writePlanOverride(p) // <<< สำคัญ: ทำให้พฤติกรรมเหมือนคุณ set ผ่าน DevTools
+            writePlanOverride(p) // สำคัญ: ทำให้พฤติกรรมเหมือน set ผ่าน DevTools
           } else {
             writePlanOverride(null)
           }

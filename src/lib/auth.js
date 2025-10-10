@@ -1,5 +1,4 @@
 import { jsx as _jsx } from "react/jsx-runtime";
-// src/lib/auth.tsx
 import React, { createContext, useContext } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles';
@@ -8,7 +7,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
-// ---------- Plan override helpers (DevTools-like butอัตโนมัติ) ----------
+// ---------- Plan override helpers (DevTools-like but อัตโนมัติ) ----------
 const OV_KEY = 'bp:plan';
 // ใช้ค่า override ถ้ามี (เหมือนคุณ set ผ่าน DevTools)
 const readPlanOverride = () => {
@@ -17,7 +16,7 @@ const readPlanOverride = () => {
     const v = localStorage.getItem(OV_KEY);
     return v === 'free' || v === 'pro' || v === 'ultra' ? v : null;
 };
-// เขียน mirror ลง localStorage อัตโนมัติ: pro/ultra → set, free → remove
+// เขียน mirror ลง localStorage อัตโนมัติ: pro/ultra → set, free/ไม่มี → remove
 const writePlanOverride = (p) => {
     try {
         if (p === 'pro' || p === 'ultra')
@@ -86,7 +85,7 @@ export function AuthProvider({ children }) {
                 void fetchProfilePlan(session.user.id).then(p => {
                     if (p) {
                         setProfilePlan(p);
-                        writePlanOverride(p); // <<< สำคัญ: ทำให้พฤติกรรมเหมือนคุณ set ผ่าน DevTools
+                        writePlanOverride(p); // สำคัญ: ทำให้พฤติกรรมเหมือน set ผ่าน DevTools
                     }
                     else {
                         writePlanOverride(null);
