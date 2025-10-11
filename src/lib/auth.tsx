@@ -15,13 +15,11 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
 
 // ---------- Plan override helpers ----------
 const OV_KEY = 'bp:plan'
-
 const readPlanOverride = (): Plan | null => {
   if (typeof window === 'undefined') return null
   const v = localStorage.getItem(OV_KEY)
   return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
 }
-
 const writePlanOverride = (p: Plan | null | undefined) => {
   try {
     if (p === 'pro' || p === 'ultra') localStorage.setItem(OV_KEY, p)
@@ -33,7 +31,12 @@ function mapUser(u: User | null): UserLite | null {
   if (!u) return null
   const metaPlan = (u.user_metadata as any)?.plan as Plan | undefined
   const plan: Plan = readPlanOverride() ?? metaPlan ?? 'free'
-  return { id: u.id, email: u.email ?? null, name: (u.user_metadata as any)?.name ?? null, plan }
+  return {
+    id: u.id,
+    email: u.email ?? null,
+    name: (u.user_metadata as any)?.name ?? null,
+    plan,
+  }
 }
 
 type Entitlement = {
@@ -92,28 +95,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     let sub: any
-    let hb: number | null = null
+    let hb: ReturnType<typeof setInterval> | null = null
     let devSub: { unsubscribe: () => void } | null = null
+
+    // listeners สำหรับ touch ตอนโฟกัส/กลับมาแอคทีฟ
+    const onFocus = () => { void touchDevice().catch(() => {}) }
+    const onVisible = () => { if (document.visibilityState === 'visible') void touchDevice().catch(() => {}) }
 
     async function boot() {
       if (!supabase) { setLoading(false); return }
+
       const { data: { session } } = await supabase.auth.getSession()
       setUser(mapUser(session?.user ?? null))
       setLoading(false)
 
       if (session?.user) {
-        // mirror plan จาก profiles
+        // sync plan
         void fetchProfilePlan(session.user.id).then(p => {
           if (p) { setProfilePlan(p); writePlanOverride(p) } else { writePlanOverride(null) }
         })
-        // ลงทะเบียนอุปกรณ์ + touch แรก + heartbeat + subscribe revoke
-        try {
-          await registerDevice(1)
-          await touchDevice()
-        } catch (e) {
-          console.warn('[device] initial register/touch error:', e)
-        }
-        hb = window.setInterval(() => { void touchDevice().catch(() => {}) }, 60_000)
+        // ----- Device lifecycle -----
+        await registerDevice(1)
+        // heartbeat
+        hb = setInterval(() => { void touchDevice().catch(() => {}) }, 60_000)
+        // focus / visibility
+        window.addEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onVisible)
+        // revoke
         devSub = subscribeDeviceRevocation(async () => {
           try { await supabase.auth.signOut() } finally { location.reload() }
         })
@@ -123,8 +131,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(mapUser(sess?.user ?? null))
         setProfilePlan(null)
 
-        // เคลียร์ heartbeat/subscription เก่า
+        // เคลียร์ของเดิมก่อน
         if (hb) { clearInterval(hb); hb = null }
+        window.removeEventListener('focus', onFocus)
+        document.removeEventListener('visibilitychange', onVisible)
         devSub?.unsubscribe(); devSub = null
 
         if (!sess?.user) {
@@ -132,18 +142,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        // เมื่อมี user ใหม่ → โหลดโปรไฟล์/ลงทะเบียนอุปกรณ์ใหม่
+        // ผู้ใช้ใหม่เข้ามา → sync plan + device lifecycle ใหม่
         void fetchProfilePlan(sess.user.id).then(p => {
           if (p) { setProfilePlan(p); writePlanOverride(p) } else { writePlanOverride(null) }
         })
-
-        try {
-          await registerDevice(1)
-          await touchDevice()
-        } catch (e) {
-          console.warn('[device] register/touch after auth change error:', e)
-        }
-        hb = window.setInterval(() => { void touchDevice().catch(() => {}) }, 60_000)
+        await registerDevice(1)
+        hb = setInterval(() => { void touchDevice().catch(() => {}) }, 60_000)
+        window.addEventListener('focus', onFocus)
+        document.addEventListener('visibilitychange', onVisible)
         devSub = subscribeDeviceRevocation(async () => {
           try { await supabase.auth.signOut() } finally { location.reload() }
         })
@@ -151,32 +157,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     void boot()
+
     return () => {
       sub?.data?.subscription?.unsubscribe?.()
       if (hb) clearInterval(hb)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisible)
       devSub?.unsubscribe()
     }
   }, [])
 
-  // เพิ่ม touch เมื่อแท็บกลับมาโฟกัส / visibility กลับมา
-  React.useEffect(() => {
-    if (!user?.id) return
-    const onFocus = () => { void touchDevice().catch(() => {}) }
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') onFocus()
-    }
-    window.addEventListener('focus', onFocus)
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => {
-      window.removeEventListener('focus', onFocus)
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
-  }, [user?.id])
-
   const fetchProfilePlan = async (uid: string): Promise<Plan | null> => {
     try {
       if (!supabase) return null
-      const { data, error } = await supabase.from('profiles').select('plan').eq('id', uid).single()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', uid)
+        .single()
       if (error || !data?.plan) return null
       const p = data.plan as Plan
       return p === 'free' || p === 'pro' || p === 'ultra' ? p : 'free'
