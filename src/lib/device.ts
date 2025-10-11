@@ -7,7 +7,9 @@ export function getDeviceId(): string {
   try {
     let id = localStorage.getItem(LS_DEVICE_ID)
     if (!id) {
-      id = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`)
+      id =
+        (crypto?.randomUUID?.() ||
+          `${Date.now()}-${Math.random().toString(36).slice(2)}`)
       localStorage.setItem(LS_DEVICE_ID, id)
     }
     return id
@@ -26,13 +28,20 @@ function guessDeviceName(): string {
     if (/Mac OS X/.test(ua)) return 'macOS'
     if (/Windows/.test(ua)) return 'Windows'
     return navigator.platform || 'Unknown'
-  } catch { return 'Unknown' }
+  } catch {
+    return 'Unknown'
+  }
 }
 
 function getUA(): string {
-  try { return navigator.userAgent.slice(0, 255) } catch { return 'n/a' }
+  try {
+    return navigator.userAgent.slice(0, 255)
+  } catch {
+    return 'n/a'
+  }
 }
 
+/** ลงทะเบียน/อัปเดตอุปกรณ์ (ใช้ RPC: upsert_device) */
 export async function registerDevice(concurrency: number = 1): Promise<void> {
   if (!supabase) return
   const { data: sess } = await supabase.auth.getSession()
@@ -52,6 +61,7 @@ export async function registerDevice(concurrency: number = 1): Promise<void> {
   if (error) console.warn('[device] upsert_device error:', error)
 }
 
+/** Heartbeat อัปเดต last_seen (ใช้ RPC: touch_device) */
 export async function touchDevice(): Promise<void> {
   if (!supabase) return
   const { data: sess } = await supabase.auth.getSession()
@@ -63,8 +73,10 @@ export async function touchDevice(): Promise<void> {
   if (error) console.warn('[device] touch_device error:', error)
 }
 
-export function subscribeDeviceRevocation(onRevoked: () => void): { unsubscribe: () => void } {
-  // จับสำเนา client ที่ non-null เพื่อให้ TS มั่นใจ
+/** Subscribe การเพิกถอนสิทธิ์ของอุปกรณ์นี้ (UPDATE revoked=true / DELETE row) */
+export function subscribeDeviceRevocation(onRevoked: () => void): {
+  unsubscribe: () => void
+} {
   const client = supabase
   if (!client) return { unsubscribe: () => {} }
 
@@ -74,7 +86,12 @@ export function subscribeDeviceRevocation(onRevoked: () => void): { unsubscribe:
     .channel(`dev-revoke-${device_id}`)
     .on(
       'postgres_changes',
-      { event: 'UPDATE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` },
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'user_devices',
+        filter: `device_id=eq.${device_id}`,
+      },
       (payload: any) => {
         try {
           const newRow = payload?.new as { revoked?: boolean } | undefined
@@ -84,7 +101,12 @@ export function subscribeDeviceRevocation(onRevoked: () => void): { unsubscribe:
     )
     .on(
       'postgres_changes',
-      { event: 'DELETE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` },
+      {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'user_devices',
+        filter: `device_id=eq.${device_id}`,
+      },
       () => onRevoked()
     )
     .subscribe((status) => {
@@ -93,7 +115,9 @@ export function subscribeDeviceRevocation(onRevoked: () => void): { unsubscribe:
 
   return {
     unsubscribe: () => {
-      try { client.removeChannel(channel) } catch {}
-    }
+      try {
+        client.removeChannel(channel)
+      } catch {}
+    },
   }
 }
