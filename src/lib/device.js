@@ -1,55 +1,106 @@
-/** สร้าง seed คงที่ต่อเบราว์เซอร์ (ครั้งแรกสุ่ม แล้วเก็บไว้ใน localStorage) */
-function getSeed() {
-    let s = localStorage.getItem('bp:seed');
-    if (!s) {
-        s = crypto?.randomUUID?.() || String(Math.random());
-        localStorage.setItem('bp:seed', s);
-    }
-    return s;
-}
-/** แฮชง่าย ๆ ให้ได้ string คงที่ต่อเบราว์เซอร์/เครื่อง */
-export function getDeviceHash() {
-    const raw = [
-        navigator.userAgent,
-        navigator.language,
-        navigator.platform,
-        Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-        getSeed(),
-    ].join('|');
-    let h = 0;
-    for (let i = 0; i < raw.length; i++) {
-        h = (h << 5) - h + raw.charCodeAt(i);
-        h |= 0;
-    }
-    return String(h);
-}
-/** เรียก Edge Function เพื่อลงทะเบียนอุปกรณ์นี้ */
-export async function registerDevice(supabase) {
-    const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
-    if (!token)
-        return { ok: false, reason: 'no-session' };
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/register_device`;
-    const payload = {
-        device_hash: getDeviceHash(),
-        user_agent: navigator.userAgent,
-    };
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-    }).catch(() => null);
-    if (!res)
-        return { ok: false, reason: 'network' };
-    let json = null;
+// src/lib/device.ts
+import { supabase } from './auth';
+const LS_DEVICE_ID = 'bp:device_id';
+export function getDeviceId() {
     try {
-        json = await res.json();
+        let id = localStorage.getItem(LS_DEVICE_ID);
+        if (!id) {
+            id = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+            localStorage.setItem(LS_DEVICE_ID, id);
+        }
+        return id;
     }
-    catch { }
-    if (!res.ok)
-        return { ok: false, reason: json?.reason || `http-${res.status}` };
-    return json?.ok ? { ok: true } : { ok: false, reason: json?.reason || 'unknown' };
+    catch {
+        return `anon-${Date.now()}`;
+    }
+}
+function guessDeviceName() {
+    try {
+        const ua = navigator.userAgent;
+        if (/iPad|Macintosh/.test(ua) && 'ontouchend' in document)
+            return 'iPadOS';
+        if (/iPhone/.test(ua))
+            return 'iPhone';
+        if (/iPad/.test(ua))
+            return 'iPad';
+        if (/Android/.test(ua))
+            return 'Android';
+        if (/Mac OS X/.test(ua))
+            return 'macOS';
+        if (/Windows/.test(ua))
+            return 'Windows';
+        return navigator.platform || 'Unknown';
+    }
+    catch {
+        return 'Unknown';
+    }
+}
+function getUA() {
+    try {
+        return navigator.userAgent.slice(0, 255);
+    }
+    catch {
+        return 'n/a';
+    }
+}
+export async function registerDevice(concurrency = 1) {
+    if (!supabase)
+        return;
+    const { data: sess } = await supabase.auth.getSession();
+    const user = sess.session?.user;
+    if (!user)
+        return;
+    const device_id = getDeviceId();
+    const device_name = guessDeviceName();
+    const user_agent = getUA();
+    const { error } = await supabase.rpc('upsert_device', {
+        p_device_id: device_id,
+        p_device_name: device_name,
+        p_user_agent: user_agent,
+        p_concurrency: concurrency,
+    });
+    if (error)
+        console.warn('[device] upsert_device error:', error);
+}
+export async function touchDevice() {
+    if (!supabase)
+        return;
+    const { data: sess } = await supabase.auth.getSession();
+    const user = sess.session?.user;
+    if (!user)
+        return;
+    const device_id = getDeviceId();
+    const { error } = await supabase.rpc('touch_device', { p_device_id: device_id });
+    if (error)
+        console.warn('[device] touch_device error:', error);
+}
+export function subscribeDeviceRevocation(onRevoked) {
+    // จับสำเนา client ที่ non-null เพื่อให้ TS มั่นใจ
+    const client = supabase;
+    if (!client)
+        return { unsubscribe: () => { } };
+    const device_id = getDeviceId();
+    const channel = client
+        .channel(`dev-revoke-${device_id}`)
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` }, (payload) => {
+        try {
+            const newRow = payload?.new;
+            if (newRow?.revoked)
+                onRevoked();
+        }
+        catch { }
+    })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` }, () => onRevoked())
+        .subscribe((status) => {
+        if (status === 'SUBSCRIBED')
+            void touchDevice().catch(() => { });
+    });
+    return {
+        unsubscribe: () => {
+            try {
+                client.removeChannel(channel);
+            }
+            catch { }
+        }
+    };
 }

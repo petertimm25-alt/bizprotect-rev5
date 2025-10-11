@@ -15,7 +15,19 @@ import PrivateRoute from './routes/PrivateRoute'
 // เพิ่ม: FAB ปรับขนาดตัวอักษร (แสดงเฉพาะ Pro/Ultra)
 import FontScalerFab from './components/FontScalerFab'
 
+// ✅ สร้าง/เก็บ device_id ทันทีเมื่อแอปบูต
+import { getOrCreateDeviceId } from './lib/device-id'
+
 export default function App() {
+  React.useEffect(() => {
+    try {
+      // mirror เป็น cookie ด้วย เพื่อให้ฝั่ง Edge/SQL อ่านง่าย
+      getOrCreateDeviceId({ alsoCookie: true })
+    } catch {
+      // เงียบไว้กัน console รกในโปรดักชัน
+    }
+  }, [])
+
   return (
     <AuthProvider>
       {/* FAB เป็น fixed component แสดงทุกหน้า */}
