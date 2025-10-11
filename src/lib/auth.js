@@ -1,22 +1,22 @@
 import { jsx as _jsx } from "react/jsx-runtime";
+// src/lib/auth.tsx
 import React, { createContext, useContext } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles';
+import { registerDevice, touchDevice, subscribeDeviceRevocation } from './device';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
-// ---------- Plan override helpers (DevTools-like but อัตโนมัติ) ----------
+// ---------- Plan override helpers ----------
 const OV_KEY = 'bp:plan';
-// ใช้ค่า override ถ้ามี (เหมือนคุณ set ผ่าน DevTools)
 const readPlanOverride = () => {
     if (typeof window === 'undefined')
         return null;
     const v = localStorage.getItem(OV_KEY);
     return v === 'free' || v === 'pro' || v === 'ultra' ? v : null;
 };
-// เขียน mirror ลง localStorage อัตโนมัติ: pro/ultra → set, free/ไม่มี → remove
 const writePlanOverride = (p) => {
     try {
         if (p === 'pro' || p === 'ultra')
@@ -26,29 +26,20 @@ const writePlanOverride = (p) => {
     }
     catch { }
 };
-// แปลง Supabase.User -> UserLite
 function mapUser(u) {
     if (!u)
         return null;
     const metaPlan = u.user_metadata?.plan;
-    // เฟรมแรกให้ใช้ override ก่อน (กันกระพริบ)
     const plan = readPlanOverride() ?? metaPlan ?? 'free';
-    return {
-        id: u.id,
-        email: u.email ?? null,
-        name: u.user_metadata?.name ?? null,
-        plan,
-    };
+    return { id: u.id, email: u.email ?? null, name: u.user_metadata?.name ?? null, plan };
 }
 const AuthCtx = createContext(undefined);
 export function AuthProvider({ children }) {
     const [user, setUser] = React.useState(null);
     const [loading, setLoading] = React.useState(true);
-    // แผนจากตาราง profiles
     const [profilePlan, setProfilePlan] = React.useState(null);
     const envReady = !!supabase;
     const envError = envReady ? undefined : 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local';
-    // แผนสุดท้ายที่ใช้จริง: override -> profiles.plan -> user.metadata.plan -> 'free'
     const plan = React.useMemo(() => {
         const override = readPlanOverride();
         if (override)
@@ -57,7 +48,6 @@ export function AuthProvider({ children }) {
             return profilePlan;
         return user?.plan ?? 'free';
     }, [user?.plan, profilePlan]);
-    // รวมสิทธิ์จาก roles.ts
     const ent = React.useMemo(() => ({
         directorsMax: getDirectorLimit(plan),
         pdfMonthlyQuota: getPdfMonthlyQuota(plan),
@@ -69,9 +59,10 @@ export function AuthProvider({ children }) {
         proposal_builder: hasFeature(plan, 'proposal_builder'),
         priority_support: hasFeature(plan, 'priority_support'),
     }), [plan]);
-    // -------- Boot sequence --------
     React.useEffect(() => {
         let sub;
+        let hb = null;
+        let devSub = null;
         async function boot() {
             if (!supabase) {
                 setLoading(false);
@@ -80,50 +71,106 @@ export function AuthProvider({ children }) {
             const { data: { session } } = await supabase.auth.getSession();
             setUser(mapUser(session?.user ?? null));
             setLoading(false);
-            // ดึง profiles.plan แล้ว "เขียน override" ทันที → เฟรมถัดไปจะนิ่ง
             if (session?.user) {
+                // mirror plan จาก profiles
                 void fetchProfilePlan(session.user.id).then(p => {
                     if (p) {
                         setProfilePlan(p);
-                        writePlanOverride(p); // สำคัญ: ทำให้พฤติกรรมเหมือน set ผ่าน DevTools
+                        writePlanOverride(p);
                     }
                     else {
                         writePlanOverride(null);
                     }
                 });
+                // ลงทะเบียนอุปกรณ์ + touch แรก + heartbeat + subscribe revoke
+                try {
+                    await registerDevice(1);
+                    await touchDevice();
+                }
+                catch (e) {
+                    console.warn('[device] initial register/touch error:', e);
+                }
+                hb = window.setInterval(() => { void touchDevice().catch(() => { }); }, 60000);
+                devSub = subscribeDeviceRevocation(async () => {
+                    try {
+                        await supabase.auth.signOut();
+                    }
+                    finally {
+                        location.reload();
+                    }
+                });
             }
-            sub = supabase.auth.onAuthStateChange((_evt, sess) => {
+            sub = supabase.auth.onAuthStateChange(async (_evt, sess) => {
                 setUser(mapUser(sess?.user ?? null));
                 setProfilePlan(null);
-                if (sess?.user) {
-                    void fetchProfilePlan(sess.user.id).then(p => {
-                        if (p) {
-                            setProfilePlan(p);
-                            writePlanOverride(p);
-                        }
-                        else {
-                            writePlanOverride(null);
-                        }
-                    });
+                // เคลียร์ heartbeat/subscription เก่า
+                if (hb) {
+                    clearInterval(hb);
+                    hb = null;
                 }
-                else {
+                devSub?.unsubscribe();
+                devSub = null;
+                if (!sess?.user) {
                     writePlanOverride(null);
+                    return;
                 }
+                // เมื่อมี user ใหม่ → โหลดโปรไฟล์/ลงทะเบียนอุปกรณ์ใหม่
+                void fetchProfilePlan(sess.user.id).then(p => {
+                    if (p) {
+                        setProfilePlan(p);
+                        writePlanOverride(p);
+                    }
+                    else {
+                        writePlanOverride(null);
+                    }
+                });
+                try {
+                    await registerDevice(1);
+                    await touchDevice();
+                }
+                catch (e) {
+                    console.warn('[device] register/touch after auth change error:', e);
+                }
+                hb = window.setInterval(() => { void touchDevice().catch(() => { }); }, 60000);
+                devSub = subscribeDeviceRevocation(async () => {
+                    try {
+                        await supabase.auth.signOut();
+                    }
+                    finally {
+                        location.reload();
+                    }
+                });
             });
         }
-        boot();
-        return () => sub?.data?.subscription?.unsubscribe?.();
+        void boot();
+        return () => {
+            sub?.data?.subscription?.unsubscribe?.();
+            if (hb)
+                clearInterval(hb);
+            devSub?.unsubscribe();
+        };
     }, []);
-    // ดึง profiles.plan
+    // เพิ่ม touch เมื่อแท็บกลับมาโฟกัส / visibility กลับมา
+    React.useEffect(() => {
+        if (!user?.id)
+            return;
+        const onFocus = () => { void touchDevice().catch(() => { }); };
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible')
+                onFocus();
+        };
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => {
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisibility);
+        };
+    }, [user?.id]);
     const fetchProfilePlan = async (uid) => {
         try {
             if (!supabase)
                 return null;
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('plan')
-                .eq('id', uid)
-                .single();
+            const { data, error } = await supabase.from('profiles').select('plan').eq('id', uid).single();
             if (error || !data?.plan)
                 return null;
             const p = data.plan;
@@ -163,14 +210,12 @@ export function AuthProvider({ children }) {
         await supabase.auth.signOut();
         setUser(null);
         setProfilePlan(null);
-        writePlanOverride(null); // ออกจากระบบก็ล้าง mirror
+        writePlanOverride(null);
     };
     const value = {
-        user,
-        loading,
+        user, loading,
         envReady, envError,
-        plan,
-        ent,
+        plan, ent,
         signInWithEmail,
         signOut,
         logout: signOut,

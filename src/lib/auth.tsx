@@ -1,6 +1,8 @@
+// src/lib/auth.tsx
 import React, { createContext, useContext } from 'react'
 import { createClient, type User } from '@supabase/supabase-js'
 import { type Plan, hasFeature, getDirectorLimit, getPdfMonthlyQuota } from './roles'
+import { registerDevice, touchDevice, subscribeDeviceRevocation } from './device'
 
 export type UserLite = { id: string; email: string | null; name?: string | null; plan?: Plan }
 
@@ -11,17 +13,15 @@ export const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null
 
-// ---------- Plan override helpers (DevTools-like but อัตโนมัติ) ----------
+// ---------- Plan override helpers ----------
 const OV_KEY = 'bp:plan'
 
-// ใช้ค่า override ถ้ามี (เหมือนคุณ set ผ่าน DevTools)
 const readPlanOverride = (): Plan | null => {
   if (typeof window === 'undefined') return null
   const v = localStorage.getItem(OV_KEY)
   return v === 'free' || v === 'pro' || v === 'ultra' ? (v as Plan) : null
 }
 
-// เขียน mirror ลง localStorage อัตโนมัติ: pro/ultra → set, free/ไม่มี → remove
 const writePlanOverride = (p: Plan | null | undefined) => {
   try {
     if (p === 'pro' || p === 'ultra') localStorage.setItem(OV_KEY, p)
@@ -29,18 +29,11 @@ const writePlanOverride = (p: Plan | null | undefined) => {
   } catch {}
 }
 
-// แปลง Supabase.User -> UserLite
 function mapUser(u: User | null): UserLite | null {
   if (!u) return null
   const metaPlan = (u.user_metadata as any)?.plan as Plan | undefined
-  // เฟรมแรกให้ใช้ override ก่อน (กันกระพริบ)
   const plan: Plan = readPlanOverride() ?? metaPlan ?? 'free'
-  return {
-    id: u.id,
-    email: u.email ?? null,
-    name: (u.user_metadata as any)?.name ?? null,
-    plan,
-  }
+  return { id: u.id, email: u.email ?? null, name: (u.user_metadata as any)?.name ?? null, plan }
 }
 
 type Entitlement = {
@@ -73,13 +66,11 @@ const AuthCtx = createContext<AuthContextShape | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<UserLite | null>(null)
   const [loading, setLoading] = React.useState(true)
-  // แผนจากตาราง profiles
   const [profilePlan, setProfilePlan] = React.useState<Plan | null>(null)
 
   const envReady = !!supabase
   const envError = envReady ? undefined : 'โปรดตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env.local'
 
-  // แผนสุดท้ายที่ใช้จริง: override -> profiles.plan -> user.metadata.plan -> 'free'
   const plan: Plan = React.useMemo<Plan>(() => {
     const override = readPlanOverride()
     if (override) return override
@@ -87,7 +78,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user?.plan ?? 'free'
   }, [user?.plan, profilePlan])
 
-  // รวมสิทธิ์จาก roles.ts
   const ent: Entitlement = React.useMemo(() => ({
     directorsMax: getDirectorLimit(plan),
     pdfMonthlyQuota: getPdfMonthlyQuota(plan),
@@ -100,57 +90,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     priority_support: hasFeature(plan, 'priority_support'),
   }), [plan])
 
-  // -------- Boot sequence --------
   React.useEffect(() => {
     let sub: any
+    let hb: number | null = null
+    let devSub: { unsubscribe: () => void } | null = null
+
     async function boot() {
       if (!supabase) { setLoading(false); return }
       const { data: { session } } = await supabase.auth.getSession()
       setUser(mapUser(session?.user ?? null))
       setLoading(false)
 
-      // ดึง profiles.plan แล้ว "เขียน override" ทันที → เฟรมถัดไปจะนิ่ง
       if (session?.user) {
+        // mirror plan จาก profiles
         void fetchProfilePlan(session.user.id).then(p => {
-          if (p) {
-            setProfilePlan(p)
-            writePlanOverride(p) // สำคัญ: ทำให้พฤติกรรมเหมือน set ผ่าน DevTools
-          } else {
-            writePlanOverride(null)
-          }
+          if (p) { setProfilePlan(p); writePlanOverride(p) } else { writePlanOverride(null) }
+        })
+        // ลงทะเบียนอุปกรณ์ + touch แรก + heartbeat + subscribe revoke
+        try {
+          await registerDevice(1)
+          await touchDevice()
+        } catch (e) {
+          console.warn('[device] initial register/touch error:', e)
+        }
+        hb = window.setInterval(() => { void touchDevice().catch(() => {}) }, 60_000)
+        devSub = subscribeDeviceRevocation(async () => {
+          try { await supabase.auth.signOut() } finally { location.reload() }
         })
       }
 
-      sub = supabase.auth.onAuthStateChange((_evt, sess) => {
+      sub = supabase.auth.onAuthStateChange(async (_evt, sess) => {
         setUser(mapUser(sess?.user ?? null))
         setProfilePlan(null)
-        if (sess?.user) {
-          void fetchProfilePlan(sess.user.id).then(p => {
-            if (p) {
-              setProfilePlan(p)
-              writePlanOverride(p)
-            } else {
-              writePlanOverride(null)
-            }
-          })
-        } else {
+
+        // เคลียร์ heartbeat/subscription เก่า
+        if (hb) { clearInterval(hb); hb = null }
+        devSub?.unsubscribe(); devSub = null
+
+        if (!sess?.user) {
           writePlanOverride(null)
+          return
         }
+
+        // เมื่อมี user ใหม่ → โหลดโปรไฟล์/ลงทะเบียนอุปกรณ์ใหม่
+        void fetchProfilePlan(sess.user.id).then(p => {
+          if (p) { setProfilePlan(p); writePlanOverride(p) } else { writePlanOverride(null) }
+        })
+
+        try {
+          await registerDevice(1)
+          await touchDevice()
+        } catch (e) {
+          console.warn('[device] register/touch after auth change error:', e)
+        }
+        hb = window.setInterval(() => { void touchDevice().catch(() => {}) }, 60_000)
+        devSub = subscribeDeviceRevocation(async () => {
+          try { await supabase.auth.signOut() } finally { location.reload() }
+        })
       })
     }
-    boot()
-    return () => sub?.data?.subscription?.unsubscribe?.()
+
+    void boot()
+    return () => {
+      sub?.data?.subscription?.unsubscribe?.()
+      if (hb) clearInterval(hb)
+      devSub?.unsubscribe()
+    }
   }, [])
 
-  // ดึง profiles.plan
+  // เพิ่ม touch เมื่อแท็บกลับมาโฟกัส / visibility กลับมา
+  React.useEffect(() => {
+    if (!user?.id) return
+    const onFocus = () => { void touchDevice().catch(() => {}) }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') onFocus()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [user?.id])
+
   const fetchProfilePlan = async (uid: string): Promise<Plan | null> => {
     try {
       if (!supabase) return null
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('plan')
-        .eq('id', uid)
-        .single()
+      const { data, error } = await supabase.from('profiles').select('plan').eq('id', uid).single()
       if (error || !data?.plan) return null
       const p = data.plan as Plan
       return p === 'free' || p === 'pro' || p === 'ultra' ? p : 'free'
@@ -162,12 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     if (!supabase || !user?.id) return
     const p = await fetchProfilePlan(user.id)
-    if (p) {
-      setProfilePlan(p)
-      writePlanOverride(p)
-    } else {
-      writePlanOverride(null)
-    }
+    if (p) { setProfilePlan(p); writePlanOverride(p) } else { writePlanOverride(null) }
   }
 
   const signInWithEmail = async (email: string) => {
@@ -186,15 +207,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setProfilePlan(null)
-    writePlanOverride(null) // ออกจากระบบก็ล้าง mirror
+    writePlanOverride(null)
   }
 
   const value: AuthContextShape = {
-    user,
-    loading,
+    user, loading,
     envReady, envError,
-    plan,
-    ent,
+    plan, ent,
     signInWithEmail,
     signOut,
     logout: signOut,
