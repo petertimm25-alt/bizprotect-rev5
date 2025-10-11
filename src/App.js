@@ -8,17 +8,16 @@ import Login from './pages/Login';
 import AuthCallback from './pages/AuthCallback';
 import Pricing from './pages/Pricing';
 import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard'; // ถ้าคุณใช้ UnifiedDashboard เปลี่ยน import ตรงนี้
+import Dashboard from './pages/Dashboard';
 import Knowledge from './pages/Knowledge';
 import PrivateRoute from './routes/PrivateRoute';
-// เพิ่ม: FAB ปรับขนาดตัวอักษร (แสดงเฉพาะ Pro/Ultra)
+// FAB ปรับขนาดตัวอักษร (แสดงเฉพาะ Pro/Ultra)
 import FontScalerFab from './components/FontScalerFab';
-// ✅ สร้าง/เก็บ device_id ทันทีเมื่อแอปบูต
+// ✅ สร้าง/เก็บ device_id ทันทีเมื่อแอปบูต (mirror เป็น cookie ด้วย)
 import { getOrCreateDeviceId } from './lib/device-id';
 export default function App() {
     React.useEffect(() => {
         try {
-            // mirror เป็น cookie ด้วย เพื่อให้ฝั่ง Edge/SQL อ่านง่าย
             getOrCreateDeviceId({ alsoCookie: true });
         }
         catch {

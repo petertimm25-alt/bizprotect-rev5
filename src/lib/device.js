@@ -5,7 +5,9 @@ export function getDeviceId() {
     try {
         let id = localStorage.getItem(LS_DEVICE_ID);
         if (!id) {
-            id = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+            id =
+                (crypto?.randomUUID?.() ||
+                    `${Date.now()}-${Math.random().toString(36).slice(2)}`);
             localStorage.setItem(LS_DEVICE_ID, id);
         }
         return id;
@@ -43,6 +45,7 @@ function getUA() {
         return 'n/a';
     }
 }
+/** ลงทะเบียน/อัปเดตอุปกรณ์ (ใช้ RPC: upsert_device) */
 export async function registerDevice(concurrency = 1) {
     if (!supabase)
         return;
@@ -62,6 +65,7 @@ export async function registerDevice(concurrency = 1) {
     if (error)
         console.warn('[device] upsert_device error:', error);
 }
+/** Heartbeat อัปเดต last_seen (ใช้ RPC: touch_device) */
 export async function touchDevice() {
     if (!supabase)
         return;
@@ -74,15 +78,20 @@ export async function touchDevice() {
     if (error)
         console.warn('[device] touch_device error:', error);
 }
+/** Subscribe การเพิกถอนสิทธิ์ของอุปกรณ์นี้ (UPDATE revoked=true / DELETE row) */
 export function subscribeDeviceRevocation(onRevoked) {
-    // จับสำเนา client ที่ non-null เพื่อให้ TS มั่นใจ
     const client = supabase;
     if (!client)
         return { unsubscribe: () => { } };
     const device_id = getDeviceId();
     const channel = client
         .channel(`dev-revoke-${device_id}`)
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` }, (payload) => {
+        .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'user_devices',
+        filter: `device_id=eq.${device_id}`,
+    }, (payload) => {
         try {
             const newRow = payload?.new;
             if (newRow?.revoked)
@@ -90,7 +99,12 @@ export function subscribeDeviceRevocation(onRevoked) {
         }
         catch { }
     })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'user_devices', filter: `device_id=eq.${device_id}` }, () => onRevoked())
+        .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'user_devices',
+        filter: `device_id=eq.${device_id}`,
+    }, () => onRevoked())
         .subscribe((status) => {
         if (status === 'SUBSCRIBED')
             void touchDevice().catch(() => { });
@@ -101,6 +115,6 @@ export function subscribeDeviceRevocation(onRevoked) {
                 client.removeChannel(channel);
             }
             catch { }
-        }
+        },
     };
 }
